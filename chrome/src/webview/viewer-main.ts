@@ -1317,10 +1317,16 @@ export async function initializeViewerMain(options: ViewerMainOptions): Promise<
   // manual mode the id never changes and this is a no-op; no mode check is
   // needed here. handleSetTheme does not persist, which is what we want: an
   // OS flip is not a user choice.
+  let colorSchemeChangeGeneration = 0;
   watchColorScheme(() => {
+    const generation = ++colorSchemeChangeGeneration;
     void (async () => {
       try {
         const nextThemeId = await themeManager.loadSelectedTheme();
+        if (generation !== colorSchemeChangeGeneration) {
+          // A newer OS flip fired while this one was resolving; let it win.
+          return;
+        }
         if (nextThemeId && nextThemeId !== currentThemeId) {
           await handleSetTheme(nextThemeId);
         }
