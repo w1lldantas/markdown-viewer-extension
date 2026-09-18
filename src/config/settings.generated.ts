@@ -7,6 +7,9 @@
 /** All available setting keys (excludes CLI-only entries). */
 export type SettingKey =
   | 'themeId'
+  | 'themeMode'
+  | 'lightThemeId'
+  | 'darkThemeId'
   | 'frontmatterDisplay'
   | 'tableLayout'
   | 'imageLayout'
@@ -23,6 +26,12 @@ export type SettingKey =
 export interface SettingTypes {
   /** Theme preset id (themes/presets/<id>.json). Exposed as `theme` in DEFAULT_RENDER_SETTINGS (CLI) and `theme` in the mobile settings service. */
   themeId: string;
+  /** Theme selection mode. manual = always use themeId. auto = follow the OS prefers-color-scheme and use lightThemeId/darkThemeId. Browser extension only; other hosts ignore it and keep reading themeId. */
+  themeMode: 'manual' | 'auto';
+  /** Theme preset applied when themeMode is auto and the OS reports a light colour scheme. */
+  lightThemeId: string;
+  /** Theme preset applied when themeMode is auto and the OS reports a dark colour scheme. */
+  darkThemeId: string;
   /** Frontmatter display: hide | table | raw. */
   frontmatterDisplay: 'hide' | 'table' | 'raw';
   /** Table alignment. */
@@ -50,6 +59,9 @@ export interface SettingTypes {
 /** Default values for all shared settings. */
 export const DEFAULT_SETTINGS: SettingTypes = {
   themeId: 'default',
+  themeMode: 'manual',
+  lightThemeId: 'default',
+  darkThemeId: 'midnight',
   frontmatterDisplay: 'hide',
   tableLayout: 'center',
   imageLayout: 'center',
@@ -104,6 +116,12 @@ export function normalizeSetting(
   switch (key) {
     case 'themeId':
       return (typeof raw === 'string') ? raw : 'default';
+    case 'themeMode':
+      return (raw === 'manual' || raw === 'auto') ? raw : 'manual';
+    case 'lightThemeId':
+      return (typeof raw === 'string') ? raw : 'default';
+    case 'darkThemeId':
+      return (typeof raw === 'string') ? raw : 'midnight';
     case 'frontmatterDisplay':
       return (raw === 'hide' || raw === 'table' || raw === 'raw') ? raw : 'hide';
     case 'tableLayout':

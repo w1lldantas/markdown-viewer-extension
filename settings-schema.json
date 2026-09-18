@@ -12,6 +12,25 @@
       "doc": "Theme preset id (themes/presets/<id>.json). Exposed as `theme` in DEFAULT_RENDER_SETTINGS (CLI) and `theme` in the mobile settings service."
     },
     {
+      "key": "themeMode",
+      "type": "enum",
+      "values": ["manual", "auto"],
+      "default": "manual",
+      "doc": "Theme selection mode. manual = always use themeId. auto = follow the OS prefers-color-scheme and use lightThemeId/darkThemeId. Browser extension only; other hosts ignore it and keep reading themeId."
+    },
+    {
+      "key": "lightThemeId",
+      "type": "string",
+      "default": "default",
+      "doc": "Theme preset applied when themeMode is auto and the OS reports a light colour scheme."
+    },
+    {
+      "key": "darkThemeId",
+      "type": "string",
+      "default": "midnight",
+      "doc": "Theme preset applied when themeMode is auto and the OS reports a dark colour scheme."
+    },
+    {
       "key": "language",
       "type": "string",
       "default": "en",
