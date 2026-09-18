@@ -12,6 +12,7 @@ import { printElement, BOOK_PRINT_CSS, PRINT_BLOCKED_BY_SANDBOX } from '../../..
 import Localization, { DEFAULT_SETTING_LOCALE } from '../../../src/utils/localization';
 import themeManager from '../../../src/utils/theme-manager';
 import { loadAndApplyTheme } from '../../../src/utils/theme-to-css';
+import { watchColorScheme } from '../../../src/utils/color-scheme';
 import { wrapFileContent } from '../../../src/utils/file-wrapper';
 import { buildCodeReadingRender, applyCodeViewPresentation } from '../../../src/utils/code-preview';
 import { deliverFile } from '../../../src/utils/file-download';
@@ -1311,6 +1312,24 @@ export async function initializeViewerMain(options: ViewerMainOptions): Promise<
     // eslint-disable-next-line no-console
     console.error('Failed to load theme at init, using defaults:', error);
   }
+
+  // Follow OS light/dark flips. loadSelectedTheme() resolves the mode, so in
+  // manual mode the id never changes and this is a no-op; no mode check is
+  // needed here. handleSetTheme does not persist, which is what we want: an
+  // OS flip is not a user choice.
+  watchColorScheme(() => {
+    void (async () => {
+      try {
+        const nextThemeId = await themeManager.loadSelectedTheme();
+        if (nextThemeId && nextThemeId !== currentThemeId) {
+          await handleSetTheme(nextThemeId);
+        }
+      } catch (error) {
+        // eslint-disable-next-line no-console
+        console.error('Failed to follow OS colour-scheme change:', error);
+      }
+    })();
+  });
 
   // NOTE: Unveil is intentionally deferred until after the initial render
   // completes and scroll position is restored (see runInitialRender below).
