@@ -210,10 +210,11 @@ export function createSettingsTabManager({
   let themes: ThemeDefinition[] = [];
   let registry: ThemeRegistry | null = null;
   let localeRegistry: LocaleRegistry | null = null;
-  // Set in loadSettings when the stored object predates themeMode, so
-  // loadThemes can migrate it once the registry (needed for the category
-  // lookup) is available. migrationThemeId is the RAW pre-fallback themeId,
-  // captured before loadSettings fills in the 'default' fallback below.
+  // Set in loadSettings when the stored object predates themeMode, or carries
+  // a themeMode outside the enum, so loadThemes can migrate it once the
+  // registry (needed for the category lookup) is available. migrationThemeId
+  // is the RESOLVED themeId (raw, then the legacy selectedTheme key, then
+  // 'default'), so the migration seeds the side from what actually renders.
   let themeModeMigrationPending = false;
   let migrationThemeId: string | undefined;
 
