@@ -622,6 +622,10 @@ label {
   margin: 10px 0;
 }
 
+.settings-row[hidden] {
+  display: none;
+}
+
 .settings-row > label:not(.checkbox-label) {
   margin-bottom: 0;
   flex: 0 0 auto;
