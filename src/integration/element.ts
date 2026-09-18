@@ -230,8 +230,14 @@ export function attachMarkdownViewerElementRuntime(
 
   // `themeId` is the user's MANUAL preset and is read by every other host, so a
   // theme that came out of resolveThemeId (an OS flip or an auto-mode settings
-  // broadcast, never an explicit id) applies without being written back.
-  let persistThemeSelection = true;
+  // broadcast, never an explicit id) applies without being written back. A
+  // counter, not a boolean, because two switchTheme calls can overlap (a newer
+  // one can finish and restore the flag while an older suppressed one is still
+  // awaiting setTheme); the trade-off is that an explicit pick overlapping a
+  // suppressed apply also fails to persist, which is deliberate, the failure
+  // direction must always be "did not save", never "saved the resolver-derived
+  // id".
+  let suppressedThemePersists = 0;
 
   const saveElementState = (state: Record<string, unknown>): void => {
     const current = (target as unknown as { __mdvState?: Record<string, unknown> }).__mdvState || {};
@@ -601,7 +607,7 @@ export function attachMarkdownViewerElementRuntime(
       updateActiveTocItem();
     },
     applyTheme: (themeId) => loadAndApplyTheme(themeId),
-    saveTheme: (themeId) => (persistThemeSelection ? themeManager.saveSelectedTheme(themeId) : Promise.resolve()),
+    saveTheme: (themeId) => (suppressedThemePersists === 0 ? themeManager.saveSelectedTheme(themeId) : Promise.resolve()),
   });
 
   const mapElementStateToPersistedState = (state: Record<string, unknown>): ViewerPersistedState => {
@@ -793,11 +799,16 @@ export function attachMarkdownViewerElementRuntime(
     }
     // An id that survived resolveThemeId unchanged is an explicit user pick;
     // anything else was resolved from the settings and must not be persisted.
-    persistThemeSelection = resolvedThemeId === themeId;
+    const suppress = resolvedThemeId !== themeId;
+    if (suppress) {
+      suppressedThemePersists += 1;
+    }
     try {
       await viewerAssembler.setTheme(resolvedThemeId);
     } finally {
-      persistThemeSelection = true;
+      if (suppress) {
+        suppressedThemePersists -= 1;
+      }
     }
   };
 

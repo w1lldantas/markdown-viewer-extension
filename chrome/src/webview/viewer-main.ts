@@ -355,10 +355,15 @@ export async function initializeViewerMain(options: ViewerMainOptions): Promise<
   // `themeId` is the user's MANUAL preset and is read by every other host, so a
   // resolver-driven re-theme (an OS colour-scheme flip, or a popup broadcast of
   // themeMode/lightThemeId/darkThemeId) must apply the theme without writing it
-  // back. Only a genuine user pick persists. Flipped around the awaited
+  // back. Only a genuine user pick persists. Incremented around the awaited
   // handleSetTheme call in resolveAndApplyTheme, which is the single
-  // resolver-driven entry point into the theme switch flow.
-  let persistThemeSelection = true;
+  // resolver-driven entry point into the theme switch flow. A counter, not a
+  // boolean, because two resolutions can overlap (a newer one can finish and
+  // restore the flag while an older one is still awaiting handleSetTheme); the
+  // trade-off is that an explicit pick that overlaps a suppressed apply also
+  // fails to persist, which is deliberate, the failure direction must always be
+  // "did not save", never "saved the resolver-derived id".
+  let suppressedThemePersists = 0;
   const logThenPermissionError = (scope: string, error: unknown, extra?: Record<string, unknown>): void => {
     const message = error instanceof Error ? error.message : String(error);
     const isThenPermission = message.includes('Permission denied to access property "then"');
@@ -603,7 +608,7 @@ export async function initializeViewerMain(options: ViewerMainOptions): Promise<
           });
         },
         applyTheme: loadAndApplyTheme,
-        saveTheme: (id) => (persistThemeSelection ? themeManager.saveSelectedTheme(id) : Promise.resolve()),
+        saveTheme: (id) => (suppressedThemePersists === 0 ? themeManager.saveSelectedTheme(id) : Promise.resolve()),
       });
       markdownViewerAdapter.setDisplayMode(mapResolvedModeToDisplayMode(getCurrentResolvedMode()));
     }
@@ -1334,11 +1339,11 @@ export async function initializeViewerMain(options: ViewerMainOptions): Promise<
         return;
       }
       if (nextThemeId && nextThemeId !== currentThemeId) {
-        persistThemeSelection = false;
+        suppressedThemePersists += 1;
         try {
           await handleSetTheme(nextThemeId);
         } finally {
-          persistThemeSelection = true;
+          suppressedThemePersists -= 1;
         }
       }
     } catch (error) {
