@@ -946,8 +946,14 @@ export function createSettingsTabManager({
    * Switch between light, dark and follow-system. Moving to light or dark
    * mirrors that side's current effective id into themeId/selectedTheme, so
    * the other hosts keep following the browser's choice exactly as they do
-   * today. Moving to auto writes only themeMode, per the invariant that the
-   * OS changing the theme must never move the user's manual preset.
+   * today. It also writes that same id into the side's own key
+   * (lightThemeId/darkThemeId), because both default to '' and fall back to
+   * themeId (see theme-resolver.ts). Without that, mirroring a dark id into
+   * themeId would make the light side's own `lightThemeId || themeId`
+   * fallback resolve to that dark id too, poisoning the light side the
+   * moment the user switches away and back. Moving to auto writes only
+   * themeMode, per the invariant that the OS changing the theme must never
+   * move the user's manual preset.
    */
   async function switchThemeMode(mode: string): Promise<void> {
     try {
@@ -955,7 +961,13 @@ export function createSettingsTabManager({
       settings.themeMode = nextMode;
 
       if (nextMode !== 'auto') {
-        settings.themeId = effectiveSideThemeId(nextMode);
+        const effectiveId = effectiveSideThemeId(nextMode);
+        settings.themeId = effectiveId;
+        if (nextMode === 'dark') {
+          settings.darkThemeId = effectiveId;
+        } else {
+          settings.lightThemeId = effectiveId;
+        }
       }
 
       await storageSet({
