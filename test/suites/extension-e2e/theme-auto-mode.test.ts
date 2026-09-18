@@ -48,6 +48,15 @@ const READ_BACKGROUND_JS = `() => {
 }`;
 
 /**
+ * typewriter's sepia page background (themes/color-schemes/sepia.json,
+ * background.page #fbf6ed), as a browser-computed rgb() string. default's
+ * page background is white, so this is what actually proves the light side
+ * honoured `lightThemeId` instead of falling back to `themeId: 'default'`,
+ * unlike a bare isDark() check, which both themes pass.
+ */
+const TYPEWRITER_PAGE_BG_RGB = 'rgb(251, 246, 237)';
+
+/**
  * Read `themeId` back from extension storage. Must run on an extension page,
  * the file:// viewer has no chrome.storage access.
  */
@@ -176,7 +185,14 @@ describe('auto light/dark mode', { skip: SKIP_EXT }, () => {
     });
     open = harness;
     const background = await evalJs(page, READ_BACKGROUND_JS);
-    assert.ok(!isDark(String(background)), `light mode must stay light under a dark OS, got ${background}`);
+    // isDark() alone would pass even if lightThemeId were ignored, since
+    // FIXED_SETTINGS' themeId: 'default' is also light. Assert the specific
+    // sepia background so the case fails unless typewriter was honoured.
+    assert.equal(
+      String(background),
+      TYPEWRITER_PAGE_BG_RGB,
+      `expected the typewriter preset background under a dark OS, got ${background}`,
+    );
     await harness.close();
     open = null;
   });
