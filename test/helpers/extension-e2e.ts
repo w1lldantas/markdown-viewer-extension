@@ -59,6 +59,8 @@ export type E2ETarget = Page | Frame;
 export interface ExtensionLaunchOptions {
   acceptDownloads?: boolean;
   headless?: boolean;
+  /** Playwright's emulated OS colour scheme, for prefers-color-scheme tests. */
+  colorScheme?: 'light' | 'dark' | 'no-preference';
 }
 
 // The driver mechanics live in ./page-driver.ts so the VS Code harness uses the
@@ -156,6 +158,7 @@ export async function launchExtensionContext(
     context = await launchBrowserContext(userDataDir, {
       acceptDownloads: options.acceptDownloads,
       headless: options.headless,
+      colorScheme: options.colorScheme,
     });
 
     const artifactDir = process.env.MV_E2E_ARTIFACT_DIR?.trim();
