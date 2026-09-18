@@ -26,11 +26,11 @@ export type SettingKey =
 export interface SettingTypes {
   /** Theme preset id (themes/presets/<id>.json). Exposed as `theme` in DEFAULT_RENDER_SETTINGS (CLI) and `theme` in the mobile settings service. */
   themeId: string;
-  /** Theme selection mode. manual = always use themeId. auto = follow the OS prefers-color-scheme and use lightThemeId/darkThemeId. Browser extension only; other hosts ignore it and keep reading themeId. */
-  themeMode: 'manual' | 'auto';
-  /** Theme preset applied when themeMode is auto and the OS reports a light colour scheme. */
+  /** Theme selection mode. light = always use the light side. dark = always use the dark side. auto = follow the OS prefers-color-scheme. Browser extension only; other hosts ignore it and keep reading themeId. */
+  themeMode: 'light' | 'dark' | 'auto';
+  /** Theme preset applied for the light side (themeMode light or auto). Empty means not configured yet, falls back to themeId then the default preset. */
   lightThemeId: string;
-  /** Theme preset applied when themeMode is auto and the OS reports a dark colour scheme. */
+  /** Theme preset applied for the dark side (themeMode dark or auto). Empty means not configured yet, falls back to the built-in dark preset. */
   darkThemeId: string;
   /** Frontmatter display: hide | table | raw. */
   frontmatterDisplay: 'hide' | 'table' | 'raw';
@@ -59,9 +59,9 @@ export interface SettingTypes {
 /** Default values for all shared settings. */
 export const DEFAULT_SETTINGS: SettingTypes = {
   themeId: 'default',
-  themeMode: 'manual',
-  lightThemeId: 'default',
-  darkThemeId: 'midnight',
+  themeMode: 'light',
+  lightThemeId: '',
+  darkThemeId: '',
   frontmatterDisplay: 'hide',
   tableLayout: 'center',
   imageLayout: 'center',
@@ -117,11 +117,11 @@ export function normalizeSetting(
     case 'themeId':
       return (typeof raw === 'string') ? raw : 'default';
     case 'themeMode':
-      return (raw === 'manual' || raw === 'auto') ? raw : 'manual';
+      return (raw === 'light' || raw === 'dark' || raw === 'auto') ? raw : 'light';
     case 'lightThemeId':
-      return (typeof raw === 'string') ? raw : 'default';
+      return (typeof raw === 'string') ? raw : '';
     case 'darkThemeId':
-      return (typeof raw === 'string') ? raw : 'midnight';
+      return (typeof raw === 'string') ? raw : '';
     case 'frontmatterDisplay':
       return (raw === 'hide' || raw === 'table' || raw === 'raw') ? raw : 'hide';
     case 'tableLayout':

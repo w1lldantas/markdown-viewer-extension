@@ -8,9 +8,9 @@
 // Keys use the mobile storage names (dartKey) where they differ from the TS key.
 
 const kThemeDefault = 'default';
-const kThemeModeDefault = 'manual';
-const kLightThemeIdDefault = 'default';
-const kDarkThemeIdDefault = 'midnight';
+const kThemeModeDefault = 'light';
+const kLightThemeIdDefault = '';
+const kDarkThemeIdDefault = '';
 const kFrontmatterDisplayDefault = 'hide';
 const kTableLayoutDefault = 'center';
 const kImageLayoutDefault = 'center';

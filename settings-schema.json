@@ -14,21 +14,21 @@
     {
       "key": "themeMode",
       "type": "enum",
-      "values": ["manual", "auto"],
-      "default": "manual",
-      "doc": "Theme selection mode. manual = always use themeId. auto = follow the OS prefers-color-scheme and use lightThemeId/darkThemeId. Browser extension only; other hosts ignore it and keep reading themeId."
+      "values": ["light", "dark", "auto"],
+      "default": "light",
+      "doc": "Theme selection mode. light = always use the light side. dark = always use the dark side. auto = follow the OS prefers-color-scheme. Browser extension only; other hosts ignore it and keep reading themeId."
     },
     {
       "key": "lightThemeId",
       "type": "string",
-      "default": "default",
-      "doc": "Theme preset applied when themeMode is auto and the OS reports a light colour scheme."
+      "default": "",
+      "doc": "Theme preset applied for the light side (themeMode light or auto). Empty means not configured yet, falls back to themeId then the default preset."
     },
     {
       "key": "darkThemeId",
       "type": "string",
-      "default": "midnight",
-      "doc": "Theme preset applied when themeMode is auto and the OS reports a dark colour scheme."
+      "default": "",
+      "doc": "Theme preset applied for the dark side (themeMode dark or auto). Empty means not configured yet, falls back to the built-in dark preset."
     },
     {
       "key": "language",
