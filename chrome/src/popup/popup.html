@@ -85,10 +85,28 @@
         <div class="info-section">
           <h3 data-i18n="settings_theme_label">Theme</h3>
           <div class="settings-row">
+            <label for="theme-mode-selector" data-i18n="settings_theme_mode_label"></label>
+            <select id="theme-mode-selector">
+              <option value="manual" data-i18n="settings_theme_mode_manual">Single theme</option>
+              <option value="auto" data-i18n="settings_theme_mode_auto">Follow system light/dark</option>
+            </select>
+          </div>
+
+          <div class="settings-row" id="theme-manual-row">
             <label for="theme-selector" data-i18n="settings_theme_label"></label>
             <select id="theme-selector">
               <option value="default">Loading themes...</option>
             </select>
+          </div>
+
+          <div class="settings-row" id="theme-light-row" hidden>
+            <label for="theme-light-selector" data-i18n="settings_theme_light_label"></label>
+            <select id="theme-light-selector"></select>
+          </div>
+
+          <div class="settings-row" id="theme-dark-row" hidden>
+            <label for="theme-dark-selector" data-i18n="settings_theme_dark_label"></label>
+            <select id="theme-dark-selector"></select>
           </div>
 
           <div class="settings-row">

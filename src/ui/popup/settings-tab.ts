@@ -9,6 +9,7 @@ import { translate, applyI18nText, getUiLocale } from './i18n-helpers';
 import { storageGet, storageSet } from './storage-helper';
 import type { EmojiStyle } from '../../types/docx.js';
 import { DEFAULT_SETTINGS } from '../../config/settings.generated';
+import type { SettingTypes } from '../../config/settings.generated';
 
 // Helper: Send message compatible with both Chrome and Firefox
 function safeSendMessage(message: unknown): void {
@@ -146,6 +147,9 @@ interface Settings {
   diagramLayout?: 'left' | 'center';
   swapPanelSide?: PanelSideMode;
   firstLineIndent?: number;
+  themeMode?: SettingTypes['themeMode'];
+  lightThemeId?: SettingTypes['lightThemeId'];
+  darkThemeId?: SettingTypes['darkThemeId'];
 }
 
 /**
@@ -741,29 +745,23 @@ export function createSettingsTabManager({
 
       themes = (await Promise.all(themePromises)).filter((t): t is ThemeDefinition => t !== null);
 
-      // Populate theme selector with categories
-      const themeSelector = document.getElementById('theme-selector') as HTMLSelectElement | null;
-      if (themeSelector) {
-        themeSelector.innerHTML = '';
+      const locale = getUiLocale();
+      const useEnglish = !locale.startsWith('zh');
 
-        // Get current locale to determine which name to use
-        const locale = getUiLocale();
-        const useEnglish = !locale.startsWith('zh');
+      // Group themes by category once; all three selectors share the list.
+      const themesByCategory: Record<string, ThemeDefinition[]> = {};
+      themes.forEach(theme => {
+        if (!themesByCategory[theme.category]) {
+          themesByCategory[theme.category] = [];
+        }
+        themesByCategory[theme.category].push(theme);
+      });
 
-        // Group themes by category
-        const themesByCategory: Record<string, ThemeDefinition[]> = {};
-        themes.forEach(theme => {
-          if (!themesByCategory[theme.category]) {
-            themesByCategory[theme.category] = [];
-          }
-          themesByCategory[theme.category].push(theme);
-        });
+      const sortedCategoryIds = Object.keys(registry!.categories)
+        .sort((a, b) => (registry!.categories[a].order || 0) - (registry!.categories[b].order || 0));
 
-        // Sort categories by their order property
-        const sortedCategoryIds = Object.keys(registry!.categories)
-          .sort((a, b) => (registry!.categories[a].order || 0) - (registry!.categories[b].order || 0));
-
-        // Add themes grouped by category (in sorted order)
+      function populateThemeSelect(select: HTMLSelectElement, selectedId: string): void {
+        select.innerHTML = '';
         sortedCategoryIds.forEach(categoryId => {
           const categoryInfo = registry!.categories[categoryId];
           if (!categoryInfo) return;
@@ -778,21 +776,48 @@ export function createSettingsTabManager({
             const option = document.createElement('option');
             option.value = theme.id;
             option.textContent = useEnglish ? theme.name_en : theme.name;
-
-            if (theme.id === currentTheme) {
+            if (theme.id === selectedId) {
               option.selected = true;
             }
-
             categoryGroup.appendChild(option);
           });
 
-          themeSelector.appendChild(categoryGroup);
+          select.appendChild(categoryGroup);
         });
+      }
 
-        // Add change listener
+      const themeSelector = document.getElementById('theme-selector') as HTMLSelectElement | null;
+      const lightSelector = document.getElementById('theme-light-selector') as HTMLSelectElement | null;
+      const darkSelector = document.getElementById('theme-dark-selector') as HTMLSelectElement | null;
+      const modeSelector = document.getElementById('theme-mode-selector') as HTMLSelectElement | null;
+
+      const themeMode = settings.themeMode ?? DEFAULT_SETTINGS.themeMode;
+      const lightThemeId = settings.lightThemeId ?? DEFAULT_SETTINGS.lightThemeId;
+      const darkThemeId = settings.darkThemeId ?? DEFAULT_SETTINGS.darkThemeId;
+
+      if (themeSelector) {
+        populateThemeSelect(themeSelector, currentTheme);
         themeSelector.addEventListener('change', (event) => {
-          const target = event.target as HTMLSelectElement;
-          switchTheme(target.value);
+          switchTheme((event.target as HTMLSelectElement).value);
+        });
+      }
+      if (lightSelector) {
+        populateThemeSelect(lightSelector, lightThemeId);
+        lightSelector.addEventListener('change', (event) => {
+          void savePairedTheme('lightThemeId', (event.target as HTMLSelectElement).value);
+        });
+      }
+      if (darkSelector) {
+        populateThemeSelect(darkSelector, darkThemeId);
+        darkSelector.addEventListener('change', (event) => {
+          void savePairedTheme('darkThemeId', (event.target as HTMLSelectElement).value);
+        });
+      }
+      if (modeSelector) {
+        modeSelector.value = themeMode;
+        applyThemeModeVisibility(themeMode);
+        modeSelector.addEventListener('change', (event) => {
+          void switchThemeMode((event.target as HTMLSelectElement).value);
         });
       }
     } catch (error) {
@@ -821,6 +846,66 @@ export function createSettingsTabManager({
       showMessage(translate('settings_theme_changed'), 'success');
     } catch (error) {
       console.error('Failed to switch theme:', error);
+      showMessage('Failed to switch theme', 'error');
+    }
+  }
+
+  /**
+   * Show the single-theme row in manual mode, the light/dark pair in auto.
+   */
+  function applyThemeModeVisibility(mode: string): void {
+    const manualRow = document.getElementById('theme-manual-row');
+    const lightRow = document.getElementById('theme-light-row');
+    const darkRow = document.getElementById('theme-dark-row');
+    const isAuto = mode === 'auto';
+    if (manualRow) manualRow.hidden = isAuto;
+    if (lightRow) lightRow.hidden = !isAuto;
+    if (darkRow) darkRow.hidden = !isAuto;
+  }
+
+  /**
+   * Persist one side of the auto pair and notify the open viewers.
+   */
+  async function savePairedTheme(key: 'lightThemeId' | 'darkThemeId', themeId: string): Promise<void> {
+    try {
+      settings[key] = themeId;
+      await storageSet({ markdownViewerSettings: settings });
+      notifySettingChanged(key, themeId);
+      showMessage(translate('settings_theme_changed'), 'success');
+    } catch (error) {
+      console.error(`Failed to save ${key}:`, error);
+      showMessage('Failed to switch theme', 'error');
+    }
+  }
+
+  /**
+   * Switch between manual and auto. Turning auto on seeds the matching side
+   * with the theme the user already had, so the common case is one click:
+   * a dark current theme seeds the dark side, anything else the light side.
+   */
+  async function switchThemeMode(mode: string): Promise<void> {
+    try {
+      settings.themeMode = mode === 'auto' ? 'auto' : 'manual';
+
+      if (settings.themeMode === 'auto' && currentTheme) {
+        const entry = registry?.themes.find(t => t.id === currentTheme);
+        if (entry?.category === 'dark') {
+          settings.darkThemeId = currentTheme;
+          const darkSelector = document.getElementById('theme-dark-selector') as HTMLSelectElement | null;
+          if (darkSelector) darkSelector.value = currentTheme;
+        } else {
+          settings.lightThemeId = currentTheme;
+          const lightSelector = document.getElementById('theme-light-selector') as HTMLSelectElement | null;
+          if (lightSelector) lightSelector.value = currentTheme;
+        }
+      }
+
+      await storageSet({ markdownViewerSettings: settings });
+      applyThemeModeVisibility(settings.themeMode);
+      notifySettingChanged('themeMode', settings.themeMode);
+      showMessage(translate('settings_theme_changed'), 'success');
+    } catch (error) {
+      console.error('Failed to switch theme mode:', error);
       showMessage('Failed to switch theme', 'error');
     }
   }

@@ -811,6 +811,11 @@
     "message": "选择主题",
     "description": "主题选择器标签"
   },
+  "settings_theme_mode_label": { "message": "主题模式", "description": "Label for the manual/auto theme mode selector" },
+  "settings_theme_mode_manual": { "message": "固定主题", "description": "Theme mode option: always use the selected theme" },
+  "settings_theme_mode_auto": { "message": "跟随系统浅色/深色", "description": "Theme mode option: follow the OS colour scheme" },
+  "settings_theme_light_label": { "message": "浅色主题", "description": "Label for the theme used when the system is light" },
+  "settings_theme_dark_label": { "message": "深色主题", "description": "Label for the theme used when the system is dark" },
   "share": {
     "message": "分享",
     "description": "Share button tooltip"

@@ -811,6 +811,26 @@
     "message": "Select Theme",
     "description": "Label for theme selector"
   },
+  "settings_theme_mode_label": {
+    "message": "Theme mode",
+    "description": "Label for the manual/auto theme mode selector"
+  },
+  "settings_theme_mode_manual": {
+    "message": "Single theme",
+    "description": "Theme mode option: always use the selected theme"
+  },
+  "settings_theme_mode_auto": {
+    "message": "Follow system light/dark",
+    "description": "Theme mode option: follow the OS colour scheme"
+  },
+  "settings_theme_light_label": {
+    "message": "Light theme",
+    "description": "Label for the theme used when the system is light"
+  },
+  "settings_theme_dark_label": {
+    "message": "Dark theme",
+    "description": "Label for the theme used when the system is dark"
+  },
   "share": {
     "message": "Share",
     "description": "Share button tooltip"
