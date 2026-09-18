@@ -133,6 +133,24 @@ export type TableLayout = 'left' | 'center' | 'center-full-width';
 export type PanelSideMode = boolean;
 
 /**
+ * Runtime mirror of SettingTypes['themeMode']. settings.generated.ts only
+ * exports the type (no runtime list survives the enum), so this is the one
+ * named constant every valid-mode check goes through instead of retyping
+ * the three literals.
+ */
+const THEME_MODE_VALUES: ReadonlyArray<SettingTypes['themeMode']> = ['light', 'dark', 'auto'];
+
+/**
+ * True only for a themeMode that matches the current enum. A stored value
+ * that predates or falls outside the enum (e.g. an orphaned 'manual' from
+ * an earlier build) must be treated exactly like an absent themeMode, both
+ * for the migration and for anything that reads the mode to drive the UI.
+ */
+function isValidThemeMode(value: unknown): value is SettingTypes['themeMode'] {
+  return typeof value === 'string' && (THEME_MODE_VALUES as readonly string[]).includes(value);
+}
+
+/**
  * User settings structure
  */
 interface Settings {
@@ -220,9 +238,11 @@ export function createSettingsTabManager({
         // The settings service merges in DEFAULT_SETTINGS before the popup
         // ever sees this object, so this raw read is the only place that can
         // still tell "never configured" (absent themeMode) apart from
-        // "explicitly set" (matches an enum default, chosen by the user).
-        themeModeMigrationPending = !('themeMode' in storedSettings);
-        migrationThemeId = storedSettings.themeId;
+        // "explicitly set" (matches an enum default, chosen by the user). A
+        // themeMode outside the current enum (e.g. an orphaned 'manual' from
+        // an earlier build) is treated the same as absent, nothing
+        // downstream normalises it otherwise.
+        themeModeMigrationPending = !isValidThemeMode(storedSettings.themeMode);
         settings = { ...settings, ...storedSettings };
       }
 
@@ -234,6 +254,10 @@ export function createSettingsTabManager({
       // with the legacy selectedTheme storage key.
       const themeResult = await storageGet(['selectedTheme']);
       settings.themeId = settings.themeId || (themeResult.selectedTheme as string) || 'default';
+      // Feed the migration below the same themeId the rest of the popup
+      // resolves (raw, then legacy selectedTheme, then 'default'), so the
+      // legacy fallback is respected before it decides what to seed.
+      migrationThemeId = themeModeMigrationPending ? settings.themeId : undefined;
     } catch (error) {
       console.error('Failed to load settings:', error);
     }
@@ -822,28 +846,39 @@ export function createSettingsTabManager({
       const darkSelector = document.getElementById('theme-dark-selector') as HTMLSelectElement | null;
       const modeSelector = document.getElementById('theme-mode-selector') as HTMLSelectElement | null;
 
-      const themeMode = settings.themeMode ?? DEFAULT_SETTINGS.themeMode;
-      const lightThemeId = settings.lightThemeId ?? DEFAULT_SETTINGS.lightThemeId;
-      const darkThemeId = settings.darkThemeId ?? DEFAULT_SETTINGS.darkThemeId;
+      const themeMode = isValidThemeMode(settings.themeMode) ? settings.themeMode : DEFAULT_SETTINGS.themeMode;
 
+      // Populate with the EFFECTIVE id for each side, not the raw stored
+      // one, an empty or stale raw value would otherwise leave the browser
+      // selecting the first option (Default) while the page renders
+      // something else (see effectiveSideThemeId above).
       if (lightSelector) {
-        populateThemeSelect(lightSelector, lightThemeId);
-        lightSelector.addEventListener('change', (event) => {
-          void savePairedTheme('lightThemeId', (event.target as HTMLSelectElement).value);
-        });
+        populateThemeSelect(lightSelector, effectiveSideThemeId('light'));
+        if (!lightSelector.dataset.listenerAdded) {
+          lightSelector.dataset.listenerAdded = 'true';
+          lightSelector.addEventListener('change', (event) => {
+            void savePairedTheme('lightThemeId', (event.target as HTMLSelectElement).value);
+          });
+        }
       }
       if (darkSelector) {
-        populateThemeSelect(darkSelector, darkThemeId);
-        darkSelector.addEventListener('change', (event) => {
-          void savePairedTheme('darkThemeId', (event.target as HTMLSelectElement).value);
-        });
+        populateThemeSelect(darkSelector, effectiveSideThemeId('dark'));
+        if (!darkSelector.dataset.listenerAdded) {
+          darkSelector.dataset.listenerAdded = 'true';
+          darkSelector.addEventListener('change', (event) => {
+            void savePairedTheme('darkThemeId', (event.target as HTMLSelectElement).value);
+          });
+        }
       }
       if (modeSelector) {
         modeSelector.value = themeMode;
         applyThemeModeVisibility(themeMode);
-        modeSelector.addEventListener('change', (event) => {
-          void switchThemeMode((event.target as HTMLSelectElement).value);
-        });
+        if (!modeSelector.dataset.listenerAdded) {
+          modeSelector.dataset.listenerAdded = 'true';
+          modeSelector.addEventListener('change', (event) => {
+            void switchThemeMode((event.target as HTMLSelectElement).value);
+          });
+        }
       }
     } catch (error) {
       console.error('Failed to load themes:', error);
