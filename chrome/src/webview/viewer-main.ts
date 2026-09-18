@@ -1800,6 +1800,9 @@ export async function initializeViewerMain(options: ViewerMainOptions): Promise<
         const value = payload?.value;
         
         if (key === 'themeId' && typeof value === 'string') {
+          // Join the shared generation counter so an auto-mode resolution that
+          // is still in flight cannot land on top of this newer explicit pick.
+          themeResolutionGeneration += 1;
           void handleSetTheme(value);
         } else if (key === 'themeMode' || key === 'lightThemeId' || key === 'darkThemeId') {
           // The popup changed the auto-mode configuration. Re-resolve rather
