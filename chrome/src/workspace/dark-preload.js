@@ -5,8 +5,23 @@
 // workspace init code (outer page), so both surfaces converge quickly.
 (function () {
   try {
-    if (sessionStorage.getItem('mdv-dark') === '1') {
+    var cached = sessionStorage.getItem('mdv-dark');
+    if (cached === '1') {
       document.documentElement.classList.add('dark');
+      return;
+    }
+    if (cached === '0') {
+      return;
     }
   } catch (_) { /* storage disabled */ }
+
+  // No cached flag yet (first open of this session): fall back to the OS
+  // preference so an auto-mode dark theme does not flash white. The cached
+  // flag wins when present because it reflects the theme actually applied —
+  // a manual light theme on a dark OS must not flash dark.
+  try {
+    if (typeof matchMedia === 'function' && matchMedia('(prefers-color-scheme: dark)').matches) {
+      document.documentElement.classList.add('dark');
+    }
+  } catch (_) { /* matchMedia unavailable */ }
 })();
