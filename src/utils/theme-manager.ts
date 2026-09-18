@@ -6,6 +6,8 @@
 import { fetchJSON } from './fetch-utils';
 import type { Theme, FontScheme, HeadingConfig } from '../types/theme';
 import type { PlatformAPI } from '../types/index';
+import { prefersDarkScheme } from './color-scheme';
+import { resolveEffectiveThemeId } from './theme-resolver';
 
 /**
  * Font configuration for a single font
@@ -242,7 +244,13 @@ class ThemeManager {
   }
 
   /**
-   * Load theme from storage
+   * Load the theme to apply from storage.
+   *
+   * In manual mode this is `themeId`, exactly as before. In auto mode the
+   * light/dark pair is resolved against the OS preference. This method never
+   * writes: an OS flip must not overwrite the user's manual choice, and the
+   * other hosts keep reading `themeId` untouched.
+   *
    * @returns Theme ID
    */
   async loadSelectedTheme(): Promise<string> {
@@ -253,8 +261,16 @@ class ThemeManager {
     try {
       // Prefer settings service
       if (platform.settings) {
-        const theme = await platform.settings.get('themeId');
-        return theme || 'default';
+        const [themeMode, themeId, lightThemeId, darkThemeId] = await Promise.all([
+          platform.settings.get('themeMode'),
+          platform.settings.get('themeId'),
+          platform.settings.get('lightThemeId'),
+          platform.settings.get('darkThemeId'),
+        ]);
+        return resolveEffectiveThemeId(
+          { themeMode, themeId, lightThemeId, darkThemeId },
+          prefersDarkScheme(),
+        );
       }
     } catch {
       // fallthrough to default
