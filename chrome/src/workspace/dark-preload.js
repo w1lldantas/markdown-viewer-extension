@@ -4,16 +4,28 @@
 // The flag is written by theme-to-css.ts (inside the iframe) and by the
 // workspace init code (outer page), so both surfaces converge quickly.
 (function () {
+  // localStorage is the current home of the flag: the theme setting is global,
+  // so a per-tab value would leave every fresh tab uncached.
+  var cached = null;
   try {
-    var cached = sessionStorage.getItem('mdv-dark');
-    if (cached === '1') {
-      document.documentElement.classList.add('dark');
-      return;
-    }
-    if (cached === '0') {
-      return;
-    }
+    cached = localStorage.getItem('mdv-dark');
   } catch (_) { /* storage disabled */ }
+
+  if (cached !== '1' && cached !== '0') {
+    // Sessions that were already open when the flag moved still only have the
+    // per-tab copy; read it rather than making those tabs worse.
+    try {
+      cached = sessionStorage.getItem('mdv-dark');
+    } catch (_) { /* storage disabled */ }
+  }
+
+  if (cached === '1') {
+    document.documentElement.classList.add('dark');
+    return;
+  }
+  if (cached === '0') {
+    return;
+  }
 
   // No cached flag yet (first open of this session): fall back to the OS
   // preference so an auto-mode dark theme does not flash white. The cached

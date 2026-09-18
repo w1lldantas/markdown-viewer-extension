@@ -17,7 +17,7 @@
 }
 
 /* Dark surface override — toggled by the inline preload script in
-  workspace.html when `mdv-dark=1` is present in sessionStorage. Flips the
+  workspace.html when `mdv-dark=1` is present in localStorage. Flips the
    whole palette so sidebar, file tree, toolbar buttons, search inputs and
    the landing page all follow the selected dark theme. */
 :root.dark {

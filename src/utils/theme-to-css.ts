@@ -1201,9 +1201,13 @@ export async function loadAndApplyTheme(themeId: string): Promise<void> {
       // Persist the scheme so the workspace outer page (same origin) can
       // read it synchronously via an inline preload script before CSS
       // parses — prevents a white flash during iframe navigation.
+      // localStorage, not sessionStorage: the theme setting is global, and a
+      // per-tab flag leaves every freshly opened tab without a cached value,
+      // which made the preload fall back to the OS preference and flash dark
+      // for a manual light theme on a dark OS.
       try {
-        if (typeof sessionStorage !== 'undefined') {
-          sessionStorage.setItem('mdv-dark', colorSchema === 'dark' ? '1' : '0');
+        if (typeof localStorage !== 'undefined') {
+          localStorage.setItem('mdv-dark', colorSchema === 'dark' ? '1' : '0');
         }
       } catch { /* storage disabled */ }
     }

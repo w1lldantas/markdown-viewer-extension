@@ -1832,7 +1832,7 @@ async function consumePendingWorkspaceOpen(): Promise<boolean> {
 // ─── Init ───
 // Dark-mode sync: read the currently selected theme's category from the
 // registry and toggle `.dark` on <html>. Doing this eagerly (not via the
-// iframe-written sessionStorage flag) guarantees the outer workspace surface
+// iframe-written localStorage flag) guarantees the outer workspace surface
 // is already dark on first paint after refresh, and stays consistent while
 // switching files — otherwise .preview-pane flashes white behind the iframe
 // element during its navigation blank frame.
@@ -1842,7 +1842,7 @@ async function syncDarkClassFromSelectedTheme(): Promise<void> {
     await themeManager.initialize();
     const isDark = themeManager.getThemeCategory(themeId) === 'dark';
     document.documentElement.classList.toggle('dark', isDark);
-    try { sessionStorage.setItem('mdv-dark', isDark ? '1' : '0'); } catch { /* storage disabled */ }
+    try { localStorage.setItem('mdv-dark', isDark ? '1' : '0'); } catch { /* storage disabled */ }
   } catch { /* keep default light */ }
 }
 
