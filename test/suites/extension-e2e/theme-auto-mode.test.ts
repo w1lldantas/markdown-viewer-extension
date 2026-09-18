@@ -155,14 +155,41 @@ describe('auto light/dark mode', { skip: SKIP_EXT }, () => {
     open = null;
   });
 
-  it('ignores a dark OS in manual mode', async () => {
+  it('ignores a dark OS in light mode', async () => {
     const { harness, page } = await openAt('mv-manual-dark-os-', 'dark', {
       ...FIXED_SETTINGS,
+      themeMode: 'light',
       themeId: 'typewriter',
     });
     open = harness;
     const background = await evalJs(page, READ_BACKGROUND_JS);
-    assert.ok(!isDark(String(background)), `manual mode must stay light, got ${background}`);
+    assert.ok(!isDark(String(background)), `light mode must stay light, got ${background}`);
+    await harness.close();
+    open = null;
+  });
+
+  it('applies the light preset in light mode under a dark OS', async () => {
+    const { harness, page } = await openAt('mv-light-mode-dark-os-', 'dark', {
+      ...FIXED_SETTINGS,
+      themeMode: 'light',
+      lightThemeId: 'typewriter',
+    });
+    open = harness;
+    const background = await evalJs(page, READ_BACKGROUND_JS);
+    assert.ok(!isDark(String(background)), `light mode must stay light under a dark OS, got ${background}`);
+    await harness.close();
+    open = null;
+  });
+
+  it('applies the dark preset in dark mode under a light OS', async () => {
+    const { harness, page } = await openAt('mv-dark-mode-light-os-', 'light', {
+      ...FIXED_SETTINGS,
+      themeMode: 'dark',
+      darkThemeId: 'midnight',
+    });
+    open = harness;
+    const background = await evalJs(page, READ_BACKGROUND_JS);
+    assert.ok(isDark(String(background)), `dark mode must stay dark under a light OS, got ${background}`);
     await harness.close();
     open = null;
   });

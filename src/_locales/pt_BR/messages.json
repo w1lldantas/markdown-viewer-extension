@@ -812,8 +812,9 @@
     "description": "Label for theme selector"
   },
   "settings_theme_mode_label": { "message": "Modo do tema", "description": "Label for the manual/auto theme mode selector" },
-  "settings_theme_mode_manual": { "message": "Tema fixo", "description": "Theme mode option: always use the selected theme" },
-  "settings_theme_mode_auto": { "message": "Seguir claro/escuro do sistema", "description": "Theme mode option: follow the OS colour scheme" },
+  "settings_theme_mode_light": { "message": "Claro", "description": "Theme mode option: always use the light theme" },
+  "settings_theme_mode_dark": { "message": "Escuro", "description": "Theme mode option: always use the dark theme" },
+  "settings_theme_mode_auto": { "message": "Seguir sistema", "description": "Theme mode option: follow the OS colour scheme" },
   "settings_theme_light_label": { "message": "Tema claro", "description": "Label for the theme used when the system is light" },
   "settings_theme_dark_label": { "message": "Tema escuro", "description": "Label for the theme used when the system is dark" },
   "share": {

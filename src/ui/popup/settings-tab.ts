@@ -10,6 +10,7 @@ import { storageGet, storageSet } from './storage-helper';
 import type { EmojiStyle } from '../../types/docx.js';
 import { DEFAULT_SETTINGS } from '../../config/settings.generated';
 import type { SettingTypes } from '../../config/settings.generated';
+import { resolveEffectiveThemeId } from '../../utils/theme-resolver';
 
 // Helper: Send message compatible with both Chrome and Firefox
 function safeSendMessage(message: unknown): void {
@@ -188,10 +189,15 @@ export function createSettingsTabManager({
     maxCacheItems: 1000,
     ...DEFAULT_SETTINGS,
   };
-  let currentTheme = 'default';
   let themes: ThemeDefinition[] = [];
   let registry: ThemeRegistry | null = null;
   let localeRegistry: LocaleRegistry | null = null;
+  // Set in loadSettings when the stored object predates themeMode, so
+  // loadThemes can migrate it once the registry (needed for the category
+  // lookup) is available. migrationThemeId is the RAW pre-fallback themeId,
+  // captured before loadSettings fills in the 'default' fallback below.
+  let themeModeMigrationPending = false;
+  let migrationThemeId: string | undefined;
 
   /**
    * Ensure locale registry is available (from Localization cache).
@@ -209,8 +215,15 @@ export function createSettingsTabManager({
   async function loadSettings(): Promise<void> {
     try {
       const result = await storageGet(['markdownViewerSettings']);
-      if (result.markdownViewerSettings) {
-        settings = { ...settings, ...result.markdownViewerSettings };
+      const storedSettings = result.markdownViewerSettings as Partial<Settings> | undefined;
+      if (storedSettings) {
+        // The settings service merges in DEFAULT_SETTINGS before the popup
+        // ever sees this object, so this raw read is the only place that can
+        // still tell "never configured" (absent themeMode) apart from
+        // "explicitly set" (matches an enum default, chosen by the user).
+        themeModeMigrationPending = !('themeMode' in storedSettings);
+        migrationThemeId = storedSettings.themeId;
+        settings = { ...settings, ...storedSettings };
       }
 
       if (!settings.docxHrDisplay) {
@@ -220,8 +233,7 @@ export function createSettingsTabManager({
       // Prefer the unified settings key, but keep fallback compatibility
       // with the legacy selectedTheme storage key.
       const themeResult = await storageGet(['selectedTheme']);
-      currentTheme = settings.themeId || (themeResult.selectedTheme as string) || 'default';
-      settings.themeId = currentTheme;
+      settings.themeId = settings.themeId || (themeResult.selectedTheme as string) || 'default';
     } catch (error) {
       console.error('Failed to load settings:', error);
     }
@@ -722,6 +734,26 @@ export function createSettingsTabManager({
       const registryResponse = await fetch(chrome.runtime.getURL('themes/registry.json'));
       registry = await registryResponse.json();
 
+      // One-time migration for installs that predate themeMode: classify the
+      // legacy themeId by registry category and seed the matching side, then
+      // persist without a broadcast since nothing about the render changed.
+      if (themeModeMigrationPending) {
+        themeModeMigrationPending = false;
+        if (migrationThemeId) {
+          const entry = registry!.themes.find(t => t.id === migrationThemeId);
+          if (entry?.category === 'dark') {
+            settings.themeMode = 'dark';
+            settings.darkThemeId = migrationThemeId;
+          } else {
+            settings.themeMode = 'light';
+            settings.lightThemeId = migrationThemeId;
+          }
+        } else {
+          settings.themeMode = 'light';
+        }
+        await storageSet({ markdownViewerSettings: settings });
+      }
+
       // Load all theme metadata
       const themePromises = registry!.themes.map(async (themeInfo) => {
         try {
@@ -786,7 +818,6 @@ export function createSettingsTabManager({
         });
       }
 
-      const themeSelector = document.getElementById('theme-selector') as HTMLSelectElement | null;
       const lightSelector = document.getElementById('theme-light-selector') as HTMLSelectElement | null;
       const darkSelector = document.getElementById('theme-dark-selector') as HTMLSelectElement | null;
       const modeSelector = document.getElementById('theme-mode-selector') as HTMLSelectElement | null;
@@ -795,12 +826,6 @@ export function createSettingsTabManager({
       const lightThemeId = settings.lightThemeId ?? DEFAULT_SETTINGS.lightThemeId;
       const darkThemeId = settings.darkThemeId ?? DEFAULT_SETTINGS.darkThemeId;
 
-      if (themeSelector) {
-        populateThemeSelect(themeSelector, currentTheme);
-        themeSelector.addEventListener('change', (event) => {
-          switchTheme((event.target as HTMLSelectElement).value);
-        });
-      }
       if (lightSelector) {
         populateThemeSelect(lightSelector, lightThemeId);
         lightSelector.addEventListener('change', (event) => {
@@ -826,50 +851,53 @@ export function createSettingsTabManager({
   }
 
   /**
-   * Switch to a different theme
-   * @param themeId - Theme ID to switch to
-   */
-  async function switchTheme(themeId: string): Promise<void> {
-    try {
-      // Save theme selection to the unified settings container used by
-      // viewers/workspace init, while keeping the legacy key for compatibility.
-      settings.themeId = themeId;
-      await storageSet({
-        markdownViewerSettings: settings,
-        selectedTheme: themeId,
-      });
-      currentTheme = themeId;
-
-      // Notify all tabs to reload theme
-      notifySettingChanged('themeId', themeId);
-
-      showMessage(translate('settings_theme_changed'), 'success');
-    } catch (error) {
-      console.error('Failed to switch theme:', error);
-      showMessage('Failed to switch theme', 'error');
-    }
-  }
-
-  /**
-   * Show the single-theme row in manual mode, the light/dark pair in auto.
+   * Show the select for the side(s) the current mode actually uses, light
+   * only, dark only, or both in follow-system.
    */
   function applyThemeModeVisibility(mode: string): void {
-    const manualRow = document.getElementById('theme-manual-row');
     const lightRow = document.getElementById('theme-light-row');
     const darkRow = document.getElementById('theme-dark-row');
-    const isAuto = mode === 'auto';
-    if (manualRow) manualRow.hidden = isAuto;
-    if (lightRow) lightRow.hidden = !isAuto;
-    if (darkRow) darkRow.hidden = !isAuto;
+    if (lightRow) lightRow.hidden = mode === 'dark';
+    if (darkRow) darkRow.hidden = mode === 'light';
   }
 
   /**
-   * Persist one side of the auto pair and notify the open viewers.
+   * The effective id for one side, using the current settings exactly as
+   * resolveEffectiveThemeId would for that mode (see src/utils/theme-resolver.ts).
+   */
+  function effectiveSideThemeId(side: 'light' | 'dark'): string {
+    return resolveEffectiveThemeId(
+      {
+        themeMode: side,
+        themeId: settings.themeId,
+        lightThemeId: settings.lightThemeId,
+        darkThemeId: settings.darkThemeId,
+      },
+      side === 'dark',
+    );
+  }
+
+  /**
+   * Persist one side of the light/dark pair and notify the open viewers.
+   * An explicit pick made while that side is the active mode is also the
+   * user's manual preset, so it mirrors into themeId/selectedTheme for the
+   * other hosts. A pick made for the inactive side (e.g. the dark select
+   * while in follow-system) never touches themeId, that is the auto invariant.
    */
   async function savePairedTheme(key: 'lightThemeId' | 'darkThemeId', themeId: string): Promise<void> {
     try {
       settings[key] = themeId;
-      await storageSet({ markdownViewerSettings: settings });
+      const isActiveSide = (key === 'lightThemeId' && settings.themeMode === 'light')
+        || (key === 'darkThemeId' && settings.themeMode === 'dark');
+
+      if (isActiveSide) {
+        settings.themeId = themeId;
+      }
+
+      await storageSet({
+        markdownViewerSettings: settings,
+        ...(isActiveSide ? { selectedTheme: themeId } : {}),
+      });
       notifySettingChanged(key, themeId);
       showMessage(translate('settings_theme_changed'), 'success');
     } catch (error) {
@@ -879,30 +907,27 @@ export function createSettingsTabManager({
   }
 
   /**
-   * Switch between manual and auto. Turning auto on seeds the matching side
-   * with the theme the user already had, so the common case is one click:
-   * a dark current theme seeds the dark side, anything else the light side.
+   * Switch between light, dark and follow-system. Moving to light or dark
+   * mirrors that side's current effective id into themeId/selectedTheme, so
+   * the other hosts keep following the browser's choice exactly as they do
+   * today. Moving to auto writes only themeMode, per the invariant that the
+   * OS changing the theme must never move the user's manual preset.
    */
   async function switchThemeMode(mode: string): Promise<void> {
     try {
-      settings.themeMode = mode === 'auto' ? 'auto' : 'manual';
+      const nextMode: SettingTypes['themeMode'] = mode === 'dark' || mode === 'auto' ? mode : 'light';
+      settings.themeMode = nextMode;
 
-      if (settings.themeMode === 'auto' && currentTheme) {
-        const entry = registry?.themes.find(t => t.id === currentTheme);
-        if (entry?.category === 'dark') {
-          settings.darkThemeId = currentTheme;
-          const darkSelector = document.getElementById('theme-dark-selector') as HTMLSelectElement | null;
-          if (darkSelector) darkSelector.value = currentTheme;
-        } else {
-          settings.lightThemeId = currentTheme;
-          const lightSelector = document.getElementById('theme-light-selector') as HTMLSelectElement | null;
-          if (lightSelector) lightSelector.value = currentTheme;
-        }
+      if (nextMode !== 'auto') {
+        settings.themeId = effectiveSideThemeId(nextMode);
       }
 
-      await storageSet({ markdownViewerSettings: settings });
-      applyThemeModeVisibility(settings.themeMode);
-      notifySettingChanged('themeMode', settings.themeMode);
+      await storageSet({
+        markdownViewerSettings: settings,
+        ...(nextMode !== 'auto' ? { selectedTheme: settings.themeId } : {}),
+      });
+      applyThemeModeVisibility(nextMode);
+      notifySettingChanged('themeMode', nextMode);
       showMessage(translate('settings_theme_changed'), 'success');
     } catch (error) {
       console.error('Failed to switch theme mode:', error);
