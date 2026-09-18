@@ -13,6 +13,7 @@ import { createViewerSurfacePort } from '../core/viewer/viewer-surface-port';
 import { escapeHtml } from '../core/markdown-utils';
 import themeManager from '../utils/theme-manager';
 import { loadAndApplyTheme } from '../utils/theme-to-css';
+import { watchColorScheme } from '../utils/color-scheme';
 import { getWebExtensionApi } from '../utils/platform-info';
 import { createTocManager } from '../../chrome/src/webview/ui/toc-manager';
 import type { PluginRenderer, PlatformAPI } from '../types';
@@ -131,6 +132,20 @@ export function bindThemeSyncFromSettingsBroadcast(
           console.error('[element-runtime] switchTheme failed on setting change', error);
         });
       });
+    } else if (key === 'themeMode' || key === 'lightThemeId' || key === 'darkThemeId') {
+      // The popup changed the auto-mode configuration. Re-resolve rather than
+      // trusting the broadcast value, because which side applies depends on
+      // the current OS preference; switchTheme('') routes through
+      // themeManager.loadSelectedTheme(), same as viewer-main.ts does.
+      controllers.forEach((controller, element) => {
+        if (!element.isConnected) {
+          controllers.delete(element);
+          return;
+        }
+        void controller.switchTheme('').catch((error) => {
+          console.error('[element-runtime] switchTheme failed on theme mode change', error);
+        });
+      });
     } else if (key === 'firstLineIndent') {
       const currentTheme = themeManager.getCurrentTheme();
       if (currentTheme) {
@@ -212,6 +227,11 @@ export function attachMarkdownViewerElementRuntime(
     }
     return themeId;
   };
+
+  // `themeId` is the user's MANUAL preset and is read by every other host, so a
+  // theme that came out of resolveThemeId (an OS flip or an auto-mode settings
+  // broadcast, never an explicit id) applies without being written back.
+  let persistThemeSelection = true;
 
   const saveElementState = (state: Record<string, unknown>): void => {
     const current = (target as unknown as { __mdvState?: Record<string, unknown> }).__mdvState || {};
@@ -581,7 +601,7 @@ export function attachMarkdownViewerElementRuntime(
       updateActiveTocItem();
     },
     applyTheme: (themeId) => loadAndApplyTheme(themeId),
-    saveTheme: (themeId) => themeManager.saveSelectedTheme(themeId),
+    saveTheme: (themeId) => (persistThemeSelection ? themeManager.saveSelectedTheme(themeId) : Promise.resolve()),
   });
 
   const mapElementStateToPersistedState = (state: Record<string, unknown>): ViewerPersistedState => {
@@ -771,7 +791,14 @@ export function attachMarkdownViewerElementRuntime(
       && document.getElementById('theme-dynamic-style')) {
       return;
     }
-    await viewerAssembler.setTheme(resolvedThemeId);
+    // An id that survived resolveThemeId unchanged is an explicit user pick;
+    // anything else was resolved from the settings and must not be persisted.
+    persistThemeSelection = resolvedThemeId === themeId;
+    try {
+      await viewerAssembler.setTheme(resolvedThemeId);
+    } finally {
+      persistThemeSelection = true;
+    }
   };
 
   const scrollToAnchor = (anchor: string): void => {
@@ -913,6 +940,14 @@ export function attachMarkdownViewerElementRuntime(
   target.addEventListener(RENDER_REQUEST_EVENT, onRenderRequest as EventListener);
   target.addEventListener(ANCHOR_REQUEST_EVENT, onAnchorRequest as EventListener);
 
+  // Follow OS light/dark flips. switchTheme('') re-resolves, so in manual mode
+  // the id does not change and the no-op guard above makes this free.
+  const unwatchColorScheme = watchColorScheme(() => {
+    void switchTheme('').catch((error) => {
+      console.error('[element-runtime] switchTheme failed on colour-scheme change', error);
+    });
+  });
+
   void switchTheme('');
   applyCurrentAttributes();
 
@@ -929,6 +964,7 @@ export function attachMarkdownViewerElementRuntime(
     },
     destroy(): void {
       attributeObserver.disconnect();
+      unwatchColorScheme();
       target.removeEventListener(RENDER_REQUEST_EVENT, onRenderRequest as EventListener);
       target.removeEventListener(ANCHOR_REQUEST_EVENT, onAnchorRequest as EventListener);
       target.removeEventListener(EXPORT_REQUEST_EVENT, onExportRequest as EventListener);
