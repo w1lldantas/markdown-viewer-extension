@@ -48,6 +48,15 @@ const READ_BACKGROUND_JS = `() => {
 }`;
 
 /**
+ * Read `themeId` back from extension storage. Must run on an extension page,
+ * the file:// viewer has no chrome.storage access.
+ */
+const READ_THEME_ID_JS = `() => chrome.storage.local.get('markdownViewerSettings').then((stored) => {
+  const settings = stored && stored.markdownViewerSettings;
+  return settings && typeof settings.themeId === 'string' ? settings.themeId : null;
+})`;
+
+/**
  * True once #markdown-content has a parseable, non-transparent background
  * reading as light (luminance >= 128). Zero-argument predicate body, routed
  * through the suite's waitFor helper (see test/helpers/extension-e2e.ts) -
@@ -96,7 +105,11 @@ async function openAt(
   prefix: string,
   colorScheme: 'light' | 'dark',
   settings: Record<string, unknown>,
-): Promise<{ harness: ExtensionContextHarness; page: import('playwright-core').Page }> {
+): Promise<{
+  harness: ExtensionContextHarness;
+  page: import('playwright-core').Page;
+  settingsPage: import('playwright-core').Page;
+}> {
   const harness = await launchExtensionContext(prefix, { colorScheme });
 
   const settingsPage = await harness.context.newPage();
@@ -114,7 +127,7 @@ async function openAt(
   await waitFor(page, WAIT_STANDALONE_READY_JS);
   await waitFor(page, THEME_CSS_READY_JS);
 
-  return { harness, page };
+  return { harness, page, settingsPage };
 }
 
 describe('auto light/dark mode', { skip: SKIP_EXT }, () => {
@@ -173,6 +186,28 @@ describe('auto light/dark mode', { skip: SKIP_EXT }, () => {
 
     const after = String(await evalJs(page, READ_BACKGROUND_JS));
     assert.ok(isDark(after), `expected a dark background after the flip, got ${after}`);
+
+    await harness.close();
+    open = null;
+  });
+
+  it('leaves the manually selected themeId untouched when the OS flips', async () => {
+    // themeId is the user's manual preset and is read by the other hosts; an
+    // OS flip resolves the auto pair without writing it back.
+    const { harness, page, settingsPage } = await openAt('mv-auto-flip-keeps-id-', 'light', {
+      ...AUTO_SETTINGS,
+      themeId: 'typewriter',
+    });
+    open = harness;
+
+    await waitFor(page, WAIT_LIGHT_JS, 10000);
+    await page.emulateMedia({ colorScheme: 'dark' });
+    await waitFor(page, WAIT_DARK_JS, 10000);
+
+    // Read from the extension page opened by openAt: chrome.storage is not
+    // reachable from the file:// viewer.
+    const storedThemeId = await evalJs<string | null>(settingsPage, READ_THEME_ID_JS);
+    assert.equal(storedThemeId, 'typewriter', 'an OS flip must not overwrite themeId');
 
     await harness.close();
     open = null;

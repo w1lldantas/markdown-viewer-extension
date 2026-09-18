@@ -352,6 +352,13 @@ export async function initializeViewerMain(options: ViewerMainOptions): Promise<
   });
   let lastScrollLine = 0;
   let currentThemeId: string | null = null;
+  // `themeId` is the user's MANUAL preset and is read by every other host, so a
+  // resolver-driven re-theme (an OS colour-scheme flip, or a popup broadcast of
+  // themeMode/lightThemeId/darkThemeId) must apply the theme without writing it
+  // back. Only a genuine user pick persists. Flipped around the awaited
+  // handleSetTheme call in resolveAndApplyTheme, which is the single
+  // resolver-driven entry point into the theme switch flow.
+  let persistThemeSelection = true;
   const logThenPermissionError = (scope: string, error: unknown, extra?: Record<string, unknown>): void => {
     const message = error instanceof Error ? error.message : String(error);
     const isThenPermission = message.includes('Permission denied to access property "then"');
@@ -596,7 +603,7 @@ export async function initializeViewerMain(options: ViewerMainOptions): Promise<
           });
         },
         applyTheme: loadAndApplyTheme,
-        saveTheme: (id) => themeManager.saveSelectedTheme(id),
+        saveTheme: (id) => (persistThemeSelection ? themeManager.saveSelectedTheme(id) : Promise.resolve()),
       });
       markdownViewerAdapter.setDisplayMode(mapResolvedModeToDisplayMode(getCurrentResolvedMode()));
     }
@@ -1327,7 +1334,12 @@ export async function initializeViewerMain(options: ViewerMainOptions): Promise<
         return;
       }
       if (nextThemeId && nextThemeId !== currentThemeId) {
-        await handleSetTheme(nextThemeId);
+        persistThemeSelection = false;
+        try {
+          await handleSetTheme(nextThemeId);
+        } finally {
+          persistThemeSelection = true;
+        }
       }
     } catch (error) {
       // eslint-disable-next-line no-console
@@ -1337,8 +1349,8 @@ export async function initializeViewerMain(options: ViewerMainOptions): Promise<
 
   // Follow OS light/dark flips. loadSelectedTheme() resolves the mode, so in
   // manual mode the id never changes and this is a no-op; no mode check is
-  // needed here. handleSetTheme does not persist, which is what we want: an
-  // OS flip is not a user choice.
+  // needed here. resolveAndApplyTheme suppresses persistence, which is what we
+  // want: an OS flip is not a user choice.
   watchColorScheme(() => {
     void resolveAndApplyTheme('Failed to follow OS colour-scheme change:');
   });
