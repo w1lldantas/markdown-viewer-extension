@@ -47,6 +47,39 @@ const READ_BACKGROUND_JS = `() => {
   return el ? getComputedStyle(el).backgroundColor : '';
 }`;
 
+/**
+ * True once #markdown-content has a parseable, non-transparent background
+ * reading as light (luminance >= 128). Zero-argument predicate body, routed
+ * through the suite's waitFor helper (see test/helpers/extension-e2e.ts) -
+ * Playwright's own page.waitForFunction rejects a string predicate that
+ * declares a parameter, evaluating it as a (truthy) function expression
+ * instead of calling it, so it must never be passed there directly.
+ */
+const WAIT_LIGHT_JS = `() => {
+  const el = document.getElementById('markdown-content');
+  if (!el) return false;
+  const rgb = getComputedStyle(el).backgroundColor;
+  const match = rgb.match(/(\\d+),\\s*(\\d+),\\s*(\\d+)/);
+  if (!match) return false;
+  const [r, g, b] = [Number(match[1]), Number(match[2]), Number(match[3])];
+  return (r * 0.299 + g * 0.587 + b * 0.114) >= 128;
+}`;
+
+/**
+ * True once #markdown-content's background reads as dark (luminance < 128) -
+ * the flip's end state, not merely "changed". Zero-argument predicate body,
+ * routed through waitFor for the same reason as WAIT_LIGHT_JS above.
+ */
+const WAIT_DARK_JS = `() => {
+  const el = document.getElementById('markdown-content');
+  if (!el) return false;
+  const rgb = getComputedStyle(el).backgroundColor;
+  const match = rgb.match(/(\\d+),\\s*(\\d+),\\s*(\\d+)/);
+  if (!match) return false;
+  const [r, g, b] = [Number(match[1]), Number(match[2]), Number(match[3])];
+  return (r * 0.299 + g * 0.587 + b * 0.114) < 128;
+}`;
+
 function isDark(rgb: string): boolean {
   const match = rgb.match(/(\d+),\s*(\d+),\s*(\d+)/);
   assert.ok(match, `unparsable colour: ${rgb}`);
@@ -125,18 +158,18 @@ describe('auto light/dark mode', { skip: SKIP_EXT }, () => {
     const { harness, page } = await openAt('mv-auto-flip-', 'light', AUTO_SETTINGS);
     open = harness;
 
+    // Settle the start value before sampling it: a still-settling theme swap
+    // can otherwise be captured mid-transition and misread as "the start".
+    await waitFor(page, WAIT_LIGHT_JS, 10000);
     const before = String(await evalJs(page, READ_BACKGROUND_JS));
     assert.ok(!isDark(before), `expected a light start, got ${before}`);
 
     await page.emulateMedia({ colorScheme: 'dark' });
-    await page.waitForFunction(
-      `(start) => {
-        const el = document.getElementById('markdown-content');
-        return Boolean(el) && getComputedStyle(el).backgroundColor !== start;
-      }`,
-      before,
-      { timeout: 10000 },
-    );
+    // Wait for the END state (dark), not merely "different from start" - a
+    // still-light background can differ from the captured start by a
+    // rounding artefact and satisfy a naive inequality before the dark theme
+    // has actually landed.
+    await waitFor(page, WAIT_DARK_JS, 10000);
 
     const after = String(await evalJs(page, READ_BACKGROUND_JS));
     assert.ok(isDark(after), `expected a dark background after the flip, got ${after}`);
