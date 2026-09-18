@@ -1313,28 +1313,34 @@ export async function initializeViewerMain(options: ViewerMainOptions): Promise<
     console.error('Failed to load theme at init, using defaults:', error);
   }
 
+  // Shared by every path that re-resolves the theme (OS colour-scheme flips
+  // and the popup's themeMode/lightThemeId/darkThemeId broadcasts): whichever
+  // resolution is the most recently started one wins, even if an older one
+  // resolves later.
+  let themeResolutionGeneration = 0;
+  async function resolveAndApplyTheme(errorLabel: string): Promise<void> {
+    const generation = ++themeResolutionGeneration;
+    try {
+      const nextThemeId = await themeManager.loadSelectedTheme();
+      if (generation !== themeResolutionGeneration) {
+        // A newer resolution started while this one was in flight; let it win.
+        return;
+      }
+      if (nextThemeId && nextThemeId !== currentThemeId) {
+        await handleSetTheme(nextThemeId);
+      }
+    } catch (error) {
+      // eslint-disable-next-line no-console
+      console.error(errorLabel, error);
+    }
+  }
+
   // Follow OS light/dark flips. loadSelectedTheme() resolves the mode, so in
   // manual mode the id never changes and this is a no-op; no mode check is
   // needed here. handleSetTheme does not persist, which is what we want: an
   // OS flip is not a user choice.
-  let colorSchemeChangeGeneration = 0;
   watchColorScheme(() => {
-    const generation = ++colorSchemeChangeGeneration;
-    void (async () => {
-      try {
-        const nextThemeId = await themeManager.loadSelectedTheme();
-        if (generation !== colorSchemeChangeGeneration) {
-          // A newer OS flip fired while this one was resolving; let it win.
-          return;
-        }
-        if (nextThemeId && nextThemeId !== currentThemeId) {
-          await handleSetTheme(nextThemeId);
-        }
-      } catch (error) {
-        // eslint-disable-next-line no-console
-        console.error('Failed to follow OS colour-scheme change:', error);
-      }
-    })();
+    void resolveAndApplyTheme('Failed to follow OS colour-scheme change:');
   });
 
   // NOTE: Unveil is intentionally deferred until after the initial render
@@ -1787,12 +1793,7 @@ export async function initializeViewerMain(options: ViewerMainOptions): Promise<
           // The popup changed the auto-mode configuration. Re-resolve rather
           // than trusting the broadcast value, because which side applies
           // depends on the current OS preference.
-          void (async () => {
-            const nextThemeId = await themeManager.loadSelectedTheme();
-            if (nextThemeId && nextThemeId !== currentThemeId) {
-              await handleSetTheme(nextThemeId);
-            }
-          })();
+          void resolveAndApplyTheme('Failed to resolve theme after settings change:');
         } else if (key === 'swapPanelSide') {
           applyTocPanelSide(Boolean(value));
         } else if (key === 'firstLineIndent') {
