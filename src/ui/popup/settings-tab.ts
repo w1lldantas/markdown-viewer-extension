@@ -10,7 +10,7 @@ import { storageGet, storageSet } from './storage-helper';
 import type { EmojiStyle } from '../../types/docx.js';
 import { DEFAULT_SETTINGS } from '../../config/settings.generated';
 import type { SettingTypes } from '../../config/settings.generated';
-import { resolveEffectiveThemeId } from '../../utils/theme-resolver';
+import { resolveEffectiveThemeId, FALLBACK_DARK_THEME_ID } from '../../utils/theme-resolver';
 
 // Helper: Send message compatible with both Chrome and Firefox
 function safeSendMessage(message: unknown): void {
@@ -762,21 +762,27 @@ export function createSettingsTabManager({
       // One-time migration for installs that predate themeMode: classify the
       // legacy themeId by registry category and seed the matching side, then
       // persist without a broadcast since nothing about the render changed.
+      // The opposite side is seeded too, with the same default the resolver
+      // would fall through to, so the migration never leaves one side empty
+      // for a later mode switch to read.
       if (themeModeMigrationPending) {
-        themeModeMigrationPending = false;
-        if (migrationThemeId) {
-          const entry = registry!.themes.find(t => t.id === migrationThemeId);
-          if (entry?.category === 'dark') {
-            settings.themeMode = 'dark';
-            settings.darkThemeId = migrationThemeId;
-          } else {
-            settings.themeMode = 'light';
-            settings.lightThemeId = migrationThemeId;
-          }
+        const entry = migrationThemeId
+          ? registry!.themes.find(t => t.id === migrationThemeId)
+          : undefined;
+        if (migrationThemeId && entry?.category === 'dark') {
+          settings.themeMode = 'dark';
+          settings.darkThemeId = migrationThemeId;
+          settings.lightThemeId = DEFAULT_SETTINGS.themeId;
         } else {
           settings.themeMode = 'light';
+          settings.lightThemeId = migrationThemeId || DEFAULT_SETTINGS.themeId;
+          settings.darkThemeId = FALLBACK_DARK_THEME_ID;
         }
         await storageSet({ markdownViewerSettings: settings });
+        // Lowered only after the write lands. loadThemes' catch swallows a
+        // storage failure, so clearing it earlier would leave memory claiming
+        // a migration the disk never got, and nothing would retry it.
+        themeModeMigrationPending = false;
       }
 
       // Load all theme metadata
