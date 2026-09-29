@@ -159,7 +159,14 @@ describe('auto light/dark mode', { skip: SKIP_EXT }, () => {
     const { harness, page } = await openAt('mv-auto-light-', 'light', AUTO_SETTINGS);
     open = harness;
     const background = await evalJs(page, READ_BACKGROUND_JS);
-    assert.ok(!isDark(String(background)), `expected a light background, got ${background}`);
+    // isDark() alone would pass even if lightThemeId were ignored, since
+    // FIXED_SETTINGS' themeId: 'default' is also light. Assert the specific
+    // sepia background so the case fails unless typewriter was honoured.
+    assert.equal(
+      String(background),
+      TYPEWRITER_PAGE_BG_RGB,
+      `expected the typewriter preset background under a light OS, got ${background}`,
+    );
     await harness.close();
     open = null;
   });
