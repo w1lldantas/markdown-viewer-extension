@@ -133,25 +133,29 @@ export type TableLayout = 'left' | 'center' | 'center-full-width';
 export type PanelSideMode = boolean;
 
 /**
- * Runtime mirror of SettingTypes['themeMode']. settings.generated.ts only
- * exports the type (no runtime list survives the enum), so this is the one
- * named constant every valid-mode check goes through instead of retyping
- * the three literals.
+ * The modes a user can actually be in. settings.generated.ts only exports
+ * the type (no runtime list survives the enum), so this is the one named
+ * constant every valid-mode check goes through instead of retyping the
+ * three literals. It deliberately LEAVES OUT the '' the schema enum carries
+ * first: '' is the "never configured" sentinel that survives the defaults
+ * merge, not a mode, and nothing here may accept it as one.
  */
 const THEME_MODE_VALUES: ReadonlyArray<SettingTypes['themeMode']> = ['light', 'dark', 'auto'];
 
 /**
- * Named handles onto THEME_MODE_VALUES, in the order settings-schema.json
- * declares the enum. Code that needs one specific mode reads it off that
- * list instead of retyping the literal.
+ * Named handles onto THEME_MODE_VALUES, in the order it declares the modes.
+ * Code that needs one specific mode reads it off that list instead of
+ * retyping the literal. THEME_MODE_LIGHT doubles as the mode an unconfigured
+ * install is PRESENTED as until the migration below runs.
  */
 const [THEME_MODE_LIGHT, THEME_MODE_DARK] = THEME_MODE_VALUES;
 
 /**
- * True only for a themeMode that matches the current enum. A stored value
- * that predates or falls outside the enum (e.g. an orphaned 'manual' from
- * an earlier build) must be treated exactly like an absent themeMode, both
- * for the migration and for anything that reads the mode to drive the UI.
+ * True only for a themeMode the user could have chosen. The '' sentinel, an
+ * absent value, and a stored value outside the enum (e.g. an orphaned
+ * 'manual' from an earlier build) are all "never configured", both for the
+ * migration and for anything that reads the mode to drive the UI. Since ''
+ * is now the schema default, it is the path every legacy install takes.
  */
 function isValidThemeMode(value: unknown): value is SettingTypes['themeMode'] {
   return typeof value === 'string' && (THEME_MODE_VALUES as readonly string[]).includes(value);
@@ -244,12 +248,11 @@ export function createSettingsTabManager({
       const storedSettings = result.markdownViewerSettings as Partial<Settings> | undefined;
       if (storedSettings) {
         // The settings service merges in DEFAULT_SETTINGS before the popup
-        // ever sees this object, so this raw read is the only place that can
-        // still tell "never configured" (absent themeMode) apart from
-        // "explicitly set" (matches an enum default, chosen by the user). A
-        // themeMode outside the current enum (e.g. an orphaned 'manual' from
-        // an earlier build) is treated the same as absent, nothing
-        // downstream normalises it otherwise.
+        // ever sees this object. That merge is why the schema default is the
+        // '' sentinel, and both it and an absent key mean "never
+        // configured" here. A themeMode outside the current enum (e.g. an
+        // orphaned 'manual' from an earlier build) is treated the same,
+        // nothing downstream normalises it otherwise.
         themeModeMigrationPending = !isValidThemeMode(storedSettings.themeMode);
         settings = { ...settings, ...storedSettings };
       }
@@ -874,7 +877,12 @@ export function createSettingsTabManager({
       const darkSelector = document.getElementById('theme-dark-selector') as HTMLSelectElement | null;
       const modeSelector = document.getElementById('theme-mode-selector') as HTMLSelectElement | null;
 
-      const themeMode = isValidThemeMode(settings.themeMode) ? settings.themeMode : DEFAULT_SETTINGS.themeMode;
+      // Never configured (the '' sentinel, absent, or out of enum) is SHOWN
+      // as light, which is what it renders, so the select is never blank and
+      // never shows both rows at once. The schema default is not usable here
+      // precisely because it is that sentinel. The migration in loadThemes
+      // turns it into a real stored mode.
+      const themeMode = isValidThemeMode(settings.themeMode) ? settings.themeMode : THEME_MODE_LIGHT;
 
       // Populate with the EFFECTIVE id for each side, not the raw stored
       // one, an empty or stale raw value would otherwise leave the browser

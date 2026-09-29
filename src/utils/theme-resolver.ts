@@ -5,10 +5,13 @@
  * arrives as a boolean so the caller owns the matchMedia read, and this
  * function stays unit-testable in the fibjs runner.
  *
- * lightThemeId/darkThemeId default to the empty string, meaning "not
- * configured yet". A legacy install that only ever set themeId has no
- * themeMode at all, and only that case falls through to themeId, so the
- * preset it renders today survives the upgrade.
+ * themeMode/lightThemeId/darkThemeId all default to the empty string,
+ * meaning "not configured yet". themeMode needs that sentinel as much as the
+ * other two, because SettingsService merges DEFAULT_SETTINGS over the stored
+ * object, so an absent key never reaches here, the default does. A legacy
+ * install that only ever set themeId therefore arrives with themeMode '',
+ * and only that case (plus an absent or out-of-enum value) falls through to
+ * themeId, so the preset it renders today survives the upgrade.
  *
  * With a themeMode inside the enum the two sides are SYMMETRIC, light is
  * lightThemeId or the default preset and dark is darkThemeId or the
@@ -48,9 +51,9 @@ function resolveDarkSide(selection: ThemeSelection): string {
   return firstNonEmpty(selection.darkThemeId, FALLBACK_DARK_THEME_ID);
 }
 
-// Only for a stored themeMode that is absent or outside the enum, the one
-// real legacy-compatibility case. An explicit mode goes through
-// resolveLightSide, which never reads themeId.
+// Only for a themeMode that is the empty sentinel, absent or outside the
+// enum, the one real legacy-compatibility case. An explicit mode goes
+// through resolveLightSide, which never reads themeId.
 function resolveLegacyLightSide(selection: ThemeSelection): string {
   return firstNonEmpty(selection.lightThemeId, selection.themeId);
 }
@@ -65,5 +68,6 @@ export function resolveEffectiveThemeId(selection: ThemeSelection, isDark: boole
   if (selection.themeMode === 'light') {
     return resolveLightSide(selection);
   }
+  // '' (the schema default), undefined, or anything outside the enum.
   return resolveLegacyLightSide(selection);
 }

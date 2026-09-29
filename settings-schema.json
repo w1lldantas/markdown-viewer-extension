@@ -14,9 +14,9 @@
     {
       "key": "themeMode",
       "type": "enum",
-      "values": ["light", "dark", "auto"],
-      "default": "light",
-      "doc": "Theme selection mode. light = always use the light side. dark = always use the dark side. auto = follow the OS prefers-color-scheme. Browser extension only; other hosts ignore it and keep reading themeId."
+      "values": ["", "light", "dark", "auto"],
+      "default": "",
+      "doc": "Theme selection mode. Empty means never configured, the install is treated as legacy and resolves through themeId (the default, because the settings service merges defaults over the stored object, so an absent key never reaches the resolver). light = always use the light side. dark = always use the dark side. auto = follow the OS prefers-color-scheme. Every host resolves the theme through this key (loadSelectedTheme is shared); only the UI that lets the user pick a mode is browser-extension specific."
     },
     {
       "key": "lightThemeId",

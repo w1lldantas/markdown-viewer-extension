@@ -26,8 +26,8 @@ export type SettingKey =
 export interface SettingTypes {
   /** Theme preset id (themes/presets/<id>.json). Exposed as `theme` in DEFAULT_RENDER_SETTINGS (CLI) and `theme` in the mobile settings service. */
   themeId: string;
-  /** Theme selection mode. light = always use the light side. dark = always use the dark side. auto = follow the OS prefers-color-scheme. Browser extension only; other hosts ignore it and keep reading themeId. */
-  themeMode: 'light' | 'dark' | 'auto';
+  /** Theme selection mode. Empty means never configured, the install is treated as legacy and resolves through themeId (the default, because the settings service merges defaults over the stored object, so an absent key never reaches the resolver). light = always use the light side. dark = always use the dark side. auto = follow the OS prefers-color-scheme. Every host resolves the theme through this key (loadSelectedTheme is shared); only the UI that lets the user pick a mode is browser-extension specific. */
+  themeMode: '' | 'light' | 'dark' | 'auto';
   /** Theme preset applied for the light side (themeMode light or auto). Empty means not configured yet, falls back to themeId then the default preset. */
   lightThemeId: string;
   /** Theme preset applied for the dark side (themeMode dark or auto). Empty means not configured yet, falls back to the built-in dark preset. */
@@ -59,7 +59,7 @@ export interface SettingTypes {
 /** Default values for all shared settings. */
 export const DEFAULT_SETTINGS: SettingTypes = {
   themeId: 'default',
-  themeMode: 'light',
+  themeMode: '',
   lightThemeId: '',
   darkThemeId: '',
   frontmatterDisplay: 'hide',
@@ -117,7 +117,7 @@ export function normalizeSetting(
     case 'themeId':
       return (typeof raw === 'string') ? raw : 'default';
     case 'themeMode':
-      return (raw === 'light' || raw === 'dark' || raw === 'auto') ? raw : 'light';
+      return (raw === '' || raw === 'light' || raw === 'dark' || raw === 'auto') ? raw : '';
     case 'lightThemeId':
       return (typeof raw === 'string') ? raw : '';
     case 'darkThemeId':
