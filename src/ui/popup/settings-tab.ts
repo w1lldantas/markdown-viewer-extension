@@ -893,7 +893,6 @@ export function createSettingsTabManager({
 
       const lightSelector = document.getElementById('theme-light-selector') as HTMLSelectElement | null;
       const darkSelector = document.getElementById('theme-dark-selector') as HTMLSelectElement | null;
-      const modeSelector = document.getElementById('theme-mode-selector') as HTMLSelectElement | null;
 
       // Never configured (the '' sentinel, absent, or out of enum) is SHOWN
       // as light, which is what it renders, so the select is never blank and
@@ -924,26 +923,40 @@ export function createSettingsTabManager({
           });
         }
       }
-      if (modeSelector) {
-        modeSelector.value = themeMode;
-        applyThemeModeVisibility(themeMode);
-        if (!modeSelector.dataset.listenerAdded) {
-          modeSelector.dataset.listenerAdded = 'true';
-          modeSelector.addEventListener('change', (event) => {
-            void switchThemeMode((event.target as HTMLSelectElement).value);
-          });
-        }
-      }
+      setupThemeModeSelector(themeMode);
     } catch (error) {
       console.error('Failed to load themes:', error);
       // Both theme rows start `hidden` in popup.html and are only revealed by
       // applyThemeModeVisibility, which sits after the registry fetch above.
       // Without this, a failed fetch leaves the user with no theme select at
       // all instead of a stale one. The mode in memory is enough to decide
-      // which row belongs on screen; only the option lists are unavailable.
-      applyThemeModeVisibility(
+      // which row belongs on screen, to put the right value on the mode
+      // select and to keep it switchable; only the option lists of the two
+      // theme selects are unavailable, and those stay empty on purpose.
+      setupThemeModeSelector(
         isValidThemeMode(settings.themeMode) ? settings.themeMode : THEME_MODE_LIGHT,
       );
+    }
+  }
+
+  /**
+   * Put the real stored mode on the mode select, reveal the row(s) it uses
+   * and wire the change listener. Runs on both the success and the failure
+   * path of loadThemes, because the mode select depends on nothing the
+   * registry provides, and a mode the user cannot read or change is worse
+   * than a theme list that failed to load. Listener registration is
+   * idempotent through the dataset flag the rest of the file uses.
+   */
+  function setupThemeModeSelector(mode: string): void {
+    const modeSelector = document.getElementById('theme-mode-selector') as HTMLSelectElement | null;
+    applyThemeModeVisibility(mode);
+    if (!modeSelector) return;
+    modeSelector.value = mode;
+    if (!modeSelector.dataset.listenerAdded) {
+      modeSelector.dataset.listenerAdded = 'true';
+      modeSelector.addEventListener('change', (event) => {
+        void switchThemeMode((event.target as HTMLSelectElement).value);
+      });
     }
   }
 
