@@ -807,9 +807,33 @@
     "message": "Thème modifié avec succès. Veuillez recharger la page pour voir les modifications.",
     "description": "Message lors du changement de thème"
   },
+  "settings_theme_dark_label": {
+    "message": "Thème sombre",
+    "description": "Label for the theme used when the system is dark"
+  },
   "settings_theme_label": {
     "message": "Sélectionner le thème ",
     "description": "Libellé du sélecteur de thème"
+  },
+  "settings_theme_light_label": {
+    "message": "Thème clair",
+    "description": "Label for the theme used when the system is light"
+  },
+  "settings_theme_mode_auto": {
+    "message": "Suivre le système",
+    "description": "Theme mode option: follow the OS colour scheme"
+  },
+  "settings_theme_mode_dark": {
+    "message": "Sombre",
+    "description": "Theme mode option: always use the dark theme"
+  },
+  "settings_theme_mode_label": {
+    "message": "Mode de thème",
+    "description": "Label for the manual/auto theme mode selector"
+  },
+  "settings_theme_mode_light": {
+    "message": "Clair",
+    "description": "Theme mode option: always use the light theme"
   },
   "share": {
     "message": "Partager",

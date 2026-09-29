@@ -807,9 +807,33 @@
     "message": "Tema ändrat. Vänligen ladda om sidan för att se ändringarna.",
     "description": "Message shown when theme is changed"
   },
+  "settings_theme_dark_label": {
+    "message": "Mörkt tema",
+    "description": "Label for the theme used when the system is dark"
+  },
   "settings_theme_label": {
     "message": "Tema",
     "description": "Settings label for theme selection"
+  },
+  "settings_theme_light_label": {
+    "message": "Ljust tema",
+    "description": "Label for the theme used when the system is light"
+  },
+  "settings_theme_mode_auto": {
+    "message": "Följ systemet",
+    "description": "Theme mode option: follow the OS colour scheme"
+  },
+  "settings_theme_mode_dark": {
+    "message": "Mörkt",
+    "description": "Theme mode option: always use the dark theme"
+  },
+  "settings_theme_mode_label": {
+    "message": "Temaläge",
+    "description": "Label for the manual/auto theme mode selector"
+  },
+  "settings_theme_mode_light": {
+    "message": "Ljust",
+    "description": "Theme mode option: always use the light theme"
   },
   "share": {
     "message": "Dela",

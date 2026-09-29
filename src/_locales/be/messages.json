@@ -807,9 +807,33 @@
     "message": "Тэма паспяхова зменена. Калі ласка, абнавіце старонку, каб убачыць змены.",
     "description": "Message shown when theme is changed"
   },
+  "settings_theme_dark_label": {
+    "message": "Цёмная тэма",
+    "description": "Label for the theme used when the system is dark"
+  },
   "settings_theme_label": {
     "message": "Выберыце тэму",
     "description": "Label for theme selector"
+  },
+  "settings_theme_light_label": {
+    "message": "Светлая тэма",
+    "description": "Label for the theme used when the system is light"
+  },
+  "settings_theme_mode_auto": {
+    "message": "Як у сістэме",
+    "description": "Theme mode option: follow the OS colour scheme"
+  },
+  "settings_theme_mode_dark": {
+    "message": "Цёмная",
+    "description": "Theme mode option: always use the dark theme"
+  },
+  "settings_theme_mode_label": {
+    "message": "Рэжым тэмы",
+    "description": "Label for the manual/auto theme mode selector"
+  },
+  "settings_theme_mode_light": {
+    "message": "Светлая",
+    "description": "Theme mode option: always use the light theme"
   },
   "share": {
     "message": "Падзяліцца",

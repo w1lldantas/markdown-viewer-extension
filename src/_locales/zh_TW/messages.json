@@ -807,9 +807,33 @@
     "message": "主題已成功切換，請重新整理頁面檢視變化。",
     "description": "主題切換成功時顯示的訊息"
   },
+  "settings_theme_dark_label": {
+    "message": "深色主題",
+    "description": "Label for the theme used when the system is dark"
+  },
   "settings_theme_label": {
     "message": "選擇主題",
     "description": "主題選擇器標籤"
+  },
+  "settings_theme_light_label": {
+    "message": "淺色主題",
+    "description": "Label for the theme used when the system is light"
+  },
+  "settings_theme_mode_auto": {
+    "message": "跟隨系統",
+    "description": "Theme mode option: follow the OS colour scheme"
+  },
+  "settings_theme_mode_dark": {
+    "message": "深色",
+    "description": "Theme mode option: always use the dark theme"
+  },
+  "settings_theme_mode_label": {
+    "message": "主題模式",
+    "description": "Label for the manual/auto theme mode selector"
+  },
+  "settings_theme_mode_light": {
+    "message": "淺色",
+    "description": "Theme mode option: always use the light theme"
   },
   "share": {
     "message": "分享",

@@ -807,9 +807,33 @@
     "message": "Тема успешно изменена. Пожалуйста, перезагрузите страницу, чтобы увидеть изменения.",
     "description": "Сообщение при изменении темы"
   },
+  "settings_theme_dark_label": {
+    "message": "Тёмная тема",
+    "description": "Label for the theme used when the system is dark"
+  },
   "settings_theme_label": {
     "message": "Выбрать тему",
     "description": "Подпись для выбора темы"
+  },
+  "settings_theme_light_label": {
+    "message": "Светлая тема",
+    "description": "Label for the theme used when the system is light"
+  },
+  "settings_theme_mode_auto": {
+    "message": "Как в системе",
+    "description": "Theme mode option: follow the OS colour scheme"
+  },
+  "settings_theme_mode_dark": {
+    "message": "Тёмная",
+    "description": "Theme mode option: always use the dark theme"
+  },
+  "settings_theme_mode_label": {
+    "message": "Режим темы",
+    "description": "Label for the manual/auto theme mode selector"
+  },
+  "settings_theme_mode_light": {
+    "message": "Светлая",
+    "description": "Theme mode option: always use the light theme"
   },
   "share": {
     "message": "Поделиться",

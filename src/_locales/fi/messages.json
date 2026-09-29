@@ -807,9 +807,33 @@
     "message": "Teema vaihdettu onnistuneesti. Päivitä sivu nähdäksesi muutokset.",
     "description": "Message shown when theme is changed"
   },
+  "settings_theme_dark_label": {
+    "message": "Tumma teema",
+    "description": "Label for the theme used when the system is dark"
+  },
   "settings_theme_label": {
     "message": "Teema",
     "description": "Settings label for theme selection"
+  },
+  "settings_theme_light_label": {
+    "message": "Vaalea teema",
+    "description": "Label for the theme used when the system is light"
+  },
+  "settings_theme_mode_auto": {
+    "message": "Seuraa järjestelmää",
+    "description": "Theme mode option: follow the OS colour scheme"
+  },
+  "settings_theme_mode_dark": {
+    "message": "Tumma",
+    "description": "Theme mode option: always use the dark theme"
+  },
+  "settings_theme_mode_label": {
+    "message": "Teematila",
+    "description": "Label for the manual/auto theme mode selector"
+  },
+  "settings_theme_mode_light": {
+    "message": "Vaalea",
+    "description": "Theme mode option: always use the light theme"
   },
   "share": {
     "message": "Jaa",

@@ -807,9 +807,33 @@
     "message": "Thema succesvol gewijzigd. Herlaad de pagina om de wijzigingen te zien.",
     "description": "Message shown when theme is changed"
   },
+  "settings_theme_dark_label": {
+    "message": "Donker thema",
+    "description": "Label for the theme used when the system is dark"
+  },
   "settings_theme_label": {
     "message": "Selecteer thema",
     "description": "Label for theme selector"
+  },
+  "settings_theme_light_label": {
+    "message": "Licht thema",
+    "description": "Label for the theme used when the system is light"
+  },
+  "settings_theme_mode_auto": {
+    "message": "Systeeminstelling volgen",
+    "description": "Theme mode option: follow the OS colour scheme"
+  },
+  "settings_theme_mode_dark": {
+    "message": "Donker",
+    "description": "Theme mode option: always use the dark theme"
+  },
+  "settings_theme_mode_label": {
+    "message": "Themamodus",
+    "description": "Label for the manual/auto theme mode selector"
+  },
+  "settings_theme_mode_light": {
+    "message": "Licht",
+    "description": "Theme mode option: always use the light theme"
   },
   "share": {
     "message": "Delen",

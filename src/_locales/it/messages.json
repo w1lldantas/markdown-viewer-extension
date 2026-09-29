@@ -807,9 +807,33 @@
     "message": "Tema modificato con successo. Ricarica la pagina per vedere le modifiche.",
     "description": "Message shown when theme is changed"
   },
+  "settings_theme_dark_label": {
+    "message": "Tema scuro",
+    "description": "Label for the theme used when the system is dark"
+  },
   "settings_theme_label": {
     "message": "Seleziona Tema",
     "description": "Label for theme selector"
+  },
+  "settings_theme_light_label": {
+    "message": "Tema chiaro",
+    "description": "Label for the theme used when the system is light"
+  },
+  "settings_theme_mode_auto": {
+    "message": "Segui il sistema",
+    "description": "Theme mode option: follow the OS colour scheme"
+  },
+  "settings_theme_mode_dark": {
+    "message": "Scuro",
+    "description": "Theme mode option: always use the dark theme"
+  },
+  "settings_theme_mode_label": {
+    "message": "Modalità tema",
+    "description": "Label for the manual/auto theme mode selector"
+  },
+  "settings_theme_mode_light": {
+    "message": "Chiaro",
+    "description": "Theme mode option: always use the light theme"
   },
   "share": {
     "message": "Condividi",

@@ -807,9 +807,33 @@
     "message": "Motyw zmieniony pomyślnie. Odśwież stronę, aby zobaczyć zmiany.",
     "description": "Message shown when theme is changed"
   },
+  "settings_theme_dark_label": {
+    "message": "Ciemny motyw",
+    "description": "Label for the theme used when the system is dark"
+  },
   "settings_theme_label": {
     "message": "Wybierz motyw",
     "description": "Label for theme selector"
+  },
+  "settings_theme_light_label": {
+    "message": "Jasny motyw",
+    "description": "Label for the theme used when the system is light"
+  },
+  "settings_theme_mode_auto": {
+    "message": "Zgodnie z systemem",
+    "description": "Theme mode option: follow the OS colour scheme"
+  },
+  "settings_theme_mode_dark": {
+    "message": "Ciemny",
+    "description": "Theme mode option: always use the dark theme"
+  },
+  "settings_theme_mode_label": {
+    "message": "Tryb motywu",
+    "description": "Label for the manual/auto theme mode selector"
+  },
+  "settings_theme_mode_light": {
+    "message": "Jasny",
+    "description": "Theme mode option: always use the light theme"
   },
   "share": {
     "message": "Udostępnij",

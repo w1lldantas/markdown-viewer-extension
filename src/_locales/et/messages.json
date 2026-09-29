@@ -807,9 +807,33 @@
     "message": "Teema edukalt muudetud. Muudatuste nägemiseks laadige leht uuesti.",
     "description": "Message shown when theme is changed"
   },
+  "settings_theme_dark_label": {
+    "message": "Tume teema",
+    "description": "Label for the theme used when the system is dark"
+  },
   "settings_theme_label": {
     "message": "Valige teema",
     "description": "Label for theme selector"
+  },
+  "settings_theme_light_label": {
+    "message": "Hele teema",
+    "description": "Label for the theme used when the system is light"
+  },
+  "settings_theme_mode_auto": {
+    "message": "Järgi süsteemi",
+    "description": "Theme mode option: follow the OS colour scheme"
+  },
+  "settings_theme_mode_dark": {
+    "message": "Tume",
+    "description": "Theme mode option: always use the dark theme"
+  },
+  "settings_theme_mode_label": {
+    "message": "Teemarežiim",
+    "description": "Label for the manual/auto theme mode selector"
+  },
+  "settings_theme_mode_light": {
+    "message": "Hele",
+    "description": "Theme mode option: always use the light theme"
   },
   "share": {
     "message": "Jaga",

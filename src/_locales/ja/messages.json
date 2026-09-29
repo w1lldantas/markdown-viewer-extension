@@ -807,9 +807,33 @@
     "message": "テーマが正常に変更されました。変更を確認するにはページを再読み込みしてください。",
     "description": "テーマ変更時のメッセージ"
   },
+  "settings_theme_dark_label": {
+    "message": "ダークテーマ",
+    "description": "Label for the theme used when the system is dark"
+  },
   "settings_theme_label": {
     "message": "テーマを選択",
     "description": "テーマ選択のラベル"
+  },
+  "settings_theme_light_label": {
+    "message": "ライトテーマ",
+    "description": "Label for the theme used when the system is light"
+  },
+  "settings_theme_mode_auto": {
+    "message": "システムに従う",
+    "description": "Theme mode option: follow the OS colour scheme"
+  },
+  "settings_theme_mode_dark": {
+    "message": "ダーク",
+    "description": "Theme mode option: always use the dark theme"
+  },
+  "settings_theme_mode_label": {
+    "message": "テーマモード",
+    "description": "Label for the manual/auto theme mode selector"
+  },
+  "settings_theme_mode_light": {
+    "message": "ライト",
+    "description": "Theme mode option: always use the light theme"
   },
   "share": {
     "message": "共有",
