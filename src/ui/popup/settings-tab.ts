@@ -965,8 +965,19 @@ export function createSettingsTabManager({
         settings.themeId = themeId;
       }
 
+      // Delta write on top of a fresh RAW read, same as the migration in
+      // loadThemes. `settings` carries DEFAULT_SETTINGS merged in for every
+      // other key, and persisting those would materialise the whole schema
+      // and erase the "never configured" state every default-sensitive key
+      // depends on, permanently, for a theme pick that touches two of them.
+      const rawResult = await storageGet(['markdownViewerSettings']);
+      const rawSettings = (rawResult.markdownViewerSettings as Record<string, unknown> | undefined) ?? {};
       await storageSet({
-        markdownViewerSettings: settings,
+        markdownViewerSettings: {
+          ...rawSettings,
+          [key]: themeId,
+          ...(isActiveSide ? { themeId } : {}),
+        },
         ...(isActiveSide ? { selectedTheme: themeId } : {}),
       });
       notifySettingChanged(key, themeId);
@@ -1003,8 +1014,23 @@ export function createSettingsTabManager({
         }
       }
 
+      // Delta write on top of a fresh RAW read, same as the migration in
+      // loadThemes. Only the keys this switch actually moves are persisted;
+      // writing `settings` would drag DEFAULT_SETTINGS into storage for the
+      // whole schema and destroy the "never configured" state for good.
+      const rawResult = await storageGet(['markdownViewerSettings']);
+      const rawSettings = (rawResult.markdownViewerSettings as Record<string, unknown> | undefined) ?? {};
       await storageSet({
-        markdownViewerSettings: settings,
+        markdownViewerSettings: {
+          ...rawSettings,
+          themeMode: nextMode,
+          ...(nextMode !== 'auto'
+            ? {
+                themeId: settings.themeId,
+                [nextMode === 'dark' ? 'darkThemeId' : 'lightThemeId']: settings.themeId,
+              }
+            : {}),
+        },
         ...(nextMode !== 'auto' ? { selectedTheme: settings.themeId } : {}),
       });
       applyThemeModeVisibility(nextMode);
