@@ -783,8 +783,19 @@ export function attachMarkdownViewerElementRuntime(
     await viewerAssembler.updateContent(markdown, Number.isFinite(targetLine) ? targetLine : undefined);
   };
 
+  // Shared by every path that re-resolves the theme (OS colour-scheme flips
+  // and the popup's themeMode/lightThemeId/darkThemeId broadcasts): whichever
+  // resolution is the most recently started one wins, even if an older one
+  // resolves later. Same mechanism viewer-main.ts uses.
+  let themeResolutionGeneration = 0;
+
   const switchTheme = async (themeId: string): Promise<void> => {
+    const generation = ++themeResolutionGeneration;
     const resolvedThemeId = await resolveThemeId(themeId);
+    if (generation !== themeResolutionGeneration) {
+      // A newer switch started while this one was resolving; let it win.
+      return;
+    }
     // No-op when the resolved theme is already active AND its CSS is actually
     // in the DOM: skip the full apply+rerender cycle. The attach-time
     // switchTheme('') would otherwise re-render (forceRender) concurrently
