@@ -141,6 +141,13 @@ export type PanelSideMode = boolean;
 const THEME_MODE_VALUES: ReadonlyArray<SettingTypes['themeMode']> = ['light', 'dark', 'auto'];
 
 /**
+ * Named handles onto THEME_MODE_VALUES, in the order settings-schema.json
+ * declares the enum. Code that needs one specific mode reads it off that
+ * list instead of retyping the literal.
+ */
+const [THEME_MODE_LIGHT, THEME_MODE_DARK] = THEME_MODE_VALUES;
+
+/**
  * True only for a themeMode that matches the current enum. A stored value
  * that predates or falls outside the enum (e.g. an orphaned 'manual' from
  * an earlier build) must be treated exactly like an absent themeMode, both
@@ -770,11 +777,11 @@ export function createSettingsTabManager({
           ? registry!.themes.find(t => t.id === migrationThemeId)
           : undefined;
         if (migrationThemeId && entry?.category === 'dark') {
-          settings.themeMode = 'dark';
+          settings.themeMode = THEME_MODE_DARK;
           settings.darkThemeId = migrationThemeId;
           settings.lightThemeId = DEFAULT_SETTINGS.themeId;
         } else {
-          settings.themeMode = 'light';
+          settings.themeMode = THEME_MODE_LIGHT;
           settings.lightThemeId = migrationThemeId || DEFAULT_SETTINGS.themeId;
           settings.darkThemeId = FALLBACK_DARK_THEME_ID;
         }
