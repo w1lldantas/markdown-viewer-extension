@@ -15,6 +15,7 @@ import themeManager from '../utils/theme-manager';
 import { loadAndApplyTheme } from '../utils/theme-to-css';
 import { watchColorScheme } from '../utils/color-scheme';
 import { getWebExtensionApi } from '../utils/platform-info';
+import { createGenerationGuard } from '../utils/generation-guard';
 import { createTocManager } from '../../chrome/src/webview/ui/toc-manager';
 import type { PluginRenderer, PlatformAPI } from '../types';
 import { createViewerIframeHostBridge } from './iframe-viewer-host';
@@ -786,13 +787,13 @@ export function attachMarkdownViewerElementRuntime(
   // Shared by every path that re-resolves the theme (OS colour-scheme flips
   // and the popup's themeMode/lightThemeId/darkThemeId broadcasts): whichever
   // resolution is the most recently started one wins, even if an older one
-  // resolves later. Same mechanism viewer-main.ts uses.
-  let themeResolutionGeneration = 0;
+  // resolves later. Same helper viewer-main.ts uses.
+  const themeResolutionGuard = createGenerationGuard();
 
   const switchTheme = async (themeId: string): Promise<void> => {
-    const generation = ++themeResolutionGeneration;
+    const isCurrentResolution = themeResolutionGuard.begin();
     const resolvedThemeId = await resolveThemeId(themeId);
-    if (generation !== themeResolutionGeneration) {
+    if (!isCurrentResolution()) {
       // A newer switch started while this one was resolving; let it win.
       return;
     }

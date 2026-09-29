@@ -13,6 +13,7 @@ import Localization, { DEFAULT_SETTING_LOCALE } from '../../../src/utils/localiz
 import themeManager from '../../../src/utils/theme-manager';
 import { loadAndApplyTheme } from '../../../src/utils/theme-to-css';
 import { watchColorScheme } from '../../../src/utils/color-scheme';
+import { createGenerationGuard } from '../../../src/utils/generation-guard';
 import { wrapFileContent } from '../../../src/utils/file-wrapper';
 import { buildCodeReadingRender, applyCodeViewPresentation } from '../../../src/utils/code-preview';
 import { deliverFile } from '../../../src/utils/file-download';
@@ -1329,12 +1330,12 @@ export async function initializeViewerMain(options: ViewerMainOptions): Promise<
   // and the popup's themeMode/lightThemeId/darkThemeId broadcasts): whichever
   // resolution is the most recently started one wins, even if an older one
   // resolves later.
-  let themeResolutionGeneration = 0;
+  const themeResolutionGuard = createGenerationGuard();
   async function resolveAndApplyTheme(errorLabel: string): Promise<void> {
-    const generation = ++themeResolutionGeneration;
+    const isCurrentResolution = themeResolutionGuard.begin();
     try {
       const nextThemeId = await themeManager.loadSelectedTheme();
-      if (generation !== themeResolutionGeneration) {
+      if (!isCurrentResolution()) {
         // A newer resolution started while this one was in flight; let it win.
         return;
       }
@@ -1805,9 +1806,9 @@ export async function initializeViewerMain(options: ViewerMainOptions): Promise<
         const value = payload?.value;
         
         if (key === 'themeId' && typeof value === 'string') {
-          // Join the shared generation counter so an auto-mode resolution that
+          // Join the shared generation guard so an auto-mode resolution that
           // is still in flight cannot land on top of this newer explicit pick.
-          themeResolutionGeneration += 1;
+          themeResolutionGuard.invalidate();
           void handleSetTheme(value);
         } else if (key === 'themeMode' || key === 'lightThemeId' || key === 'darkThemeId') {
           // The popup changed the auto-mode configuration. Re-resolve rather
