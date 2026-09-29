@@ -293,7 +293,7 @@ export function createSettingsTabManager({
           const value = parseInt(maxCacheItemsEl.value, 10);
           if (!Number.isNaN(value)) {
             settings.maxCacheItems = value;
-            await saveSettingsToStorage();
+            await saveSettingsToStorage({ maxCacheItems: value });
           }
         });
       }
@@ -315,7 +315,7 @@ export function createSettingsTabManager({
         docxHrDisplayEl.dataset.listenerAdded = 'true';
         docxHrDisplayEl.addEventListener('change', async () => {
           settings.docxHrDisplay = docxHrDisplayEl.value as Settings['docxHrDisplay'];
-          await saveSettingsToStorage();
+          await saveSettingsToStorage({ docxHrDisplay: settings.docxHrDisplay });
         });
       }
     }
@@ -328,7 +328,7 @@ export function createSettingsTabManager({
         docxEmojiStyleEl.dataset.listenerAdded = 'true';
         docxEmojiStyleEl.addEventListener('change', async () => {
           settings.docxEmojiStyle = docxEmojiStyleEl.value as EmojiStyle;
-          await saveSettingsToStorage();
+          await saveSettingsToStorage({ docxEmojiStyle: settings.docxEmojiStyle });
         });
       }
     }
@@ -341,7 +341,7 @@ export function createSettingsTabManager({
         frontmatterDisplayEl.dataset.listenerAdded = 'true';
         frontmatterDisplayEl.addEventListener('change', async () => {
           settings.frontmatterDisplay = frontmatterDisplayEl.value as FrontmatterDisplay;
-          await saveSettingsToStorage();
+          await saveSettingsToStorage({ frontmatterDisplay: settings.frontmatterDisplay });
           // Notify all tabs to re-render
           notifySettingChanged('frontmatterDisplay', settings.frontmatterDisplay);
         });
@@ -356,7 +356,7 @@ export function createSettingsTabManager({
         tableMergeEmptyEl.dataset.listenerAdded = 'true';
         tableMergeEmptyEl.addEventListener('change', async () => {
           settings.tableMergeEmpty = tableMergeEmptyEl.checked;
-          await saveSettingsToStorage();
+          await saveSettingsToStorage({ tableMergeEmpty: settings.tableMergeEmpty });
           // Notify all tabs to re-render
           notifySettingChanged('tableMergeEmpty', settings.tableMergeEmpty);
         });
@@ -371,7 +371,7 @@ export function createSettingsTabManager({
         tableLayoutEl.dataset.listenerAdded = 'true';
         tableLayoutEl.addEventListener('change', async () => {
           settings.tableLayout = tableLayoutEl.value as TableLayout;
-          await saveSettingsToStorage();
+          await saveSettingsToStorage({ tableLayout: settings.tableLayout });
           // Notify all tabs to re-render
           notifySettingChanged('tableLayout', settings.tableLayout);
         });
@@ -386,7 +386,7 @@ export function createSettingsTabManager({
         imageLayoutEl.dataset.listenerAdded = 'true';
         imageLayoutEl.addEventListener('change', async () => {
           settings.imageLayout = imageLayoutEl.value as 'left' | 'center';
-          await saveSettingsToStorage();
+          await saveSettingsToStorage({ imageLayout: settings.imageLayout });
           // Notify all tabs to re-render
           notifySettingChanged('imageLayout', settings.imageLayout);
         });
@@ -401,7 +401,7 @@ export function createSettingsTabManager({
         diagramLayoutEl.dataset.listenerAdded = 'true';
         diagramLayoutEl.addEventListener('change', async () => {
           settings.diagramLayout = diagramLayoutEl.value as 'left' | 'center';
-          await saveSettingsToStorage();
+          await saveSettingsToStorage({ diagramLayout: settings.diagramLayout });
           // Notify all tabs to re-render
           notifySettingChanged('diagramLayout', settings.diagramLayout);
         });
@@ -416,7 +416,7 @@ export function createSettingsTabManager({
         swapPanelSideEl.dataset.listenerAdded = 'true';
         swapPanelSideEl.addEventListener('change', async () => {
           settings.swapPanelSide = swapPanelSideEl.checked;
-          await saveSettingsToStorage();
+          await saveSettingsToStorage({ swapPanelSide: settings.swapPanelSide });
           notifySettingChanged('swapPanelSide', settings.swapPanelSide);
         });
       }
@@ -430,7 +430,7 @@ export function createSettingsTabManager({
         firstLineIndentEl.dataset.listenerAdded = 'true';
         firstLineIndentEl.addEventListener('change', async () => {
           settings.firstLineIndent = parseInt(firstLineIndentEl.value, 10);
-          await saveSettingsToStorage();
+          await saveSettingsToStorage({ firstLineIndent: settings.firstLineIndent });
           notifySettingChanged('firstLineIndent', settings.firstLineIndent);
         });
       }
@@ -584,9 +584,7 @@ export function createSettingsTabManager({
 
       try {
         settings.preferredLocale = newLocale;
-        await storageSet({
-          markdownViewerSettings: settings
-        });
+        await persistSettingsDelta({ preferredLocale: newLocale });
 
         await Localization.setPreferredLocale(newLocale);
         safeSendMessage({
@@ -749,13 +747,37 @@ export function createSettingsTabManager({
   }
 
   /**
-   * Save settings to storage (internal helper)
+   * Persist ONLY the keys the caller just changed, merged on top of a fresh
+   * RAW read of the stored object. `settings` in memory is DEFAULT_SETTINGS
+   * merged with whatever is stored, so writing it whole would materialise the
+   * entire schema in storage and erase, permanently, the "never configured"
+   * state that loadSettings and the theme resolver depend on, turning every
+   * later change of a schema default into a no-op for that user.
+   * `extraKeys` carries sibling storage keys (e.g. the legacy selectedTheme)
+   * that have to land in the same write.
    */
-  async function saveSettingsToStorage(): Promise<void> {
+  async function persistSettingsDelta(
+    delta: Record<string, unknown>,
+    extraKeys: Record<string, unknown> = {}
+  ): Promise<void> {
+    const rawResult = await storageGet(['markdownViewerSettings']);
+    const rawSettings = (rawResult.markdownViewerSettings as Record<string, unknown> | undefined) ?? {};
+    await storageSet({
+      markdownViewerSettings: {
+        ...rawSettings,
+        ...delta,
+      },
+      ...extraKeys,
+    });
+  }
+
+  /**
+   * Save settings to storage (internal helper). Takes the delta the caller
+   * just changed, never the whole `settings` object, see persistSettingsDelta.
+   */
+  async function saveSettingsToStorage(delta: Record<string, unknown>): Promise<void> {
     try {
-      await storageSet({
-        markdownViewerSettings: settings
-      });
+      await persistSettingsDelta(delta);
       showMessage(translate('settings_save_success'), 'success');
     } catch (error) {
       console.error('Failed to save settings:', error);
@@ -792,19 +814,12 @@ export function createSettingsTabManager({
           settings.darkThemeId = FALLBACK_DARK_THEME_ID;
         }
         // Only the three theme keys are persisted, on top of a fresh RAW
-        // read. `settings` carries DEFAULT_SETTINGS merged in for every
-        // other key, and writing those would erase the "never configured"
-        // state the raw read in loadSettings depends on, for the whole
-        // schema, permanently, triggered by nothing but opening this tab.
-        const rawResult = await storageGet(['markdownViewerSettings']);
-        const rawSettings = (rawResult.markdownViewerSettings as Record<string, unknown> | undefined) ?? {};
-        await storageSet({
-          markdownViewerSettings: {
-            ...rawSettings,
-            themeMode: settings.themeMode,
-            lightThemeId: settings.lightThemeId,
-            darkThemeId: settings.darkThemeId,
-          },
+        // read (see persistSettingsDelta), triggered by nothing but opening
+        // this tab.
+        await persistSettingsDelta({
+          themeMode: settings.themeMode,
+          lightThemeId: settings.lightThemeId,
+          darkThemeId: settings.darkThemeId,
         });
         // Lowered only after the write lands. loadThemes' catch swallows a
         // storage failure, so clearing it earlier would leave memory claiming
@@ -976,21 +991,15 @@ export function createSettingsTabManager({
         settings.themeId = themeId;
       }
 
-      // Delta write on top of a fresh RAW read, same as the migration in
-      // loadThemes. `settings` carries DEFAULT_SETTINGS merged in for every
-      // other key, and persisting those would materialise the whole schema
-      // and erase the "never configured" state every default-sensitive key
-      // depends on, permanently, for a theme pick that touches two of them.
-      const rawResult = await storageGet(['markdownViewerSettings']);
-      const rawSettings = (rawResult.markdownViewerSettings as Record<string, unknown> | undefined) ?? {};
-      await storageSet({
-        markdownViewerSettings: {
-          ...rawSettings,
+      // Delta write on top of a fresh RAW read (see persistSettingsDelta),
+      // for a theme pick that touches at most two of the schema keys.
+      await persistSettingsDelta(
+        {
           [key]: themeId,
           ...(isActiveSide ? { themeId } : {}),
         },
-        ...(isActiveSide ? { selectedTheme: themeId } : {}),
-      });
+        isActiveSide ? { selectedTheme: themeId } : {}
+      );
       notifySettingChanged(key, themeId);
       showMessage(translate('settings_theme_changed'), 'success');
     } catch (error) {
@@ -1025,15 +1034,10 @@ export function createSettingsTabManager({
         }
       }
 
-      // Delta write on top of a fresh RAW read, same as the migration in
-      // loadThemes. Only the keys this switch actually moves are persisted;
-      // writing `settings` would drag DEFAULT_SETTINGS into storage for the
-      // whole schema and destroy the "never configured" state for good.
-      const rawResult = await storageGet(['markdownViewerSettings']);
-      const rawSettings = (rawResult.markdownViewerSettings as Record<string, unknown> | undefined) ?? {};
-      await storageSet({
-        markdownViewerSettings: {
-          ...rawSettings,
+      // Delta write on top of a fresh RAW read (see persistSettingsDelta).
+      // Only the keys this switch actually moves are persisted.
+      await persistSettingsDelta(
+        {
           themeMode: nextMode,
           ...(nextMode !== 'auto'
             ? {
@@ -1042,8 +1046,8 @@ export function createSettingsTabManager({
               }
             : {}),
         },
-        ...(nextMode !== 'auto' ? { selectedTheme: settings.themeId } : {}),
-      });
+        nextMode !== 'auto' ? { selectedTheme: settings.themeId } : {}
+      );
       applyThemeModeVisibility(nextMode);
       notifySettingChanged('themeMode', nextMode);
       showMessage(translate('settings_theme_changed'), 'success');
@@ -1081,8 +1085,10 @@ export function createSettingsTabManager({
         settings.docxEmojiStyle = docxEmojiStyleEl.value as EmojiStyle;
       }
 
-      await storageSet({
-        markdownViewerSettings: settings
+      await persistSettingsDelta({
+        maxCacheItems: settings.maxCacheItems,
+        docxHrDisplay: settings.docxHrDisplay,
+        docxEmojiStyle: settings.docxEmojiStyle,
       });
 
       if (onReloadCacheData) {
@@ -1116,8 +1122,14 @@ export function createSettingsTabManager({
         ...DEFAULT_SETTINGS,
       };
 
+      // Reset REPLACES instead of merging a delta: the point is to drop every
+      // stored key so each one goes back to "never configured" and resolves
+      // through the schema default again. Persisting DEFAULT_SETTINGS here
+      // would pin today's defaults into the user's storage forever, which is
+      // the opposite of a reset. maxCacheItems is not a schema key, so it is
+      // the only one that survives the wipe.
       await storageSet({
-        markdownViewerSettings: settings
+        markdownViewerSettings: { maxCacheItems: settings.maxCacheItems }
       });
 
       await Localization.setPreferredLocale(DEFAULT_SETTING_LOCALE);
