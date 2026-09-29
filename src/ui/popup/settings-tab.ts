@@ -785,7 +785,21 @@ export function createSettingsTabManager({
           settings.lightThemeId = migrationThemeId || DEFAULT_SETTINGS.themeId;
           settings.darkThemeId = FALLBACK_DARK_THEME_ID;
         }
-        await storageSet({ markdownViewerSettings: settings });
+        // Only the three theme keys are persisted, on top of a fresh RAW
+        // read. `settings` carries DEFAULT_SETTINGS merged in for every
+        // other key, and writing those would erase the "never configured"
+        // state the raw read in loadSettings depends on, for the whole
+        // schema, permanently, triggered by nothing but opening this tab.
+        const rawResult = await storageGet(['markdownViewerSettings']);
+        const rawSettings = (rawResult.markdownViewerSettings as Record<string, unknown> | undefined) ?? {};
+        await storageSet({
+          markdownViewerSettings: {
+            ...rawSettings,
+            themeMode: settings.themeMode,
+            lightThemeId: settings.lightThemeId,
+            darkThemeId: settings.darkThemeId,
+          },
+        });
         // Lowered only after the write lands. loadThemes' catch swallows a
         // storage failure, so clearing it earlier would leave memory claiming
         // a migration the disk never got, and nothing would retry it.
