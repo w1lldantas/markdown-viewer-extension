@@ -143,12 +143,15 @@ export type PanelSideMode = boolean;
 const THEME_MODE_VALUES: ReadonlyArray<SettingTypes['themeMode']> = ['light', 'dark', 'auto'];
 
 /**
- * Named handles onto THEME_MODE_VALUES, in the order it declares the modes.
- * Code that needs one specific mode reads it off that list instead of
- * retyping the literal. THEME_MODE_LIGHT doubles as the mode an unconfigured
- * install is PRESENTED as until the migration below runs.
+ * Named handles onto the two modes this file needs by name, bound BY VALUE
+ * and not by position in THEME_MODE_VALUES: reordering the enum in
+ * settings-schema.json used to swap what these mean with no compile error.
+ * The annotation still fails to compile if the literal ever leaves the enum.
+ * THEME_MODE_LIGHT doubles as the mode an unconfigured install is PRESENTED
+ * as until the migration below runs.
  */
-const [THEME_MODE_LIGHT, THEME_MODE_DARK] = THEME_MODE_VALUES;
+const THEME_MODE_LIGHT: SettingTypes['themeMode'] = 'light';
+const THEME_MODE_DARK: SettingTypes['themeMode'] = 'dark';
 
 /**
  * True only for a themeMode the user could have chosen. The '' sentinel, an
