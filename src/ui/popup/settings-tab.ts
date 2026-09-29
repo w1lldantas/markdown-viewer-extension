@@ -921,6 +921,14 @@ export function createSettingsTabManager({
       }
     } catch (error) {
       console.error('Failed to load themes:', error);
+      // Both theme rows start `hidden` in popup.html and are only revealed by
+      // applyThemeModeVisibility, which sits after the registry fetch above.
+      // Without this, a failed fetch leaves the user with no theme select at
+      // all instead of a stale one. The mode in memory is enough to decide
+      // which row belongs on screen; only the option lists are unavailable.
+      applyThemeModeVisibility(
+        isValidThemeMode(settings.themeMode) ? settings.themeMode : THEME_MODE_LIGHT,
+      );
     }
   }
 
