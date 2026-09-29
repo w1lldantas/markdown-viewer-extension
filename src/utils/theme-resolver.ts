@@ -6,10 +6,15 @@
  * function stays unit-testable in the fibjs runner.
  *
  * lightThemeId/darkThemeId default to the empty string, meaning "not
- * configured yet". This lets a legacy install that only ever set themeId
- * keep rendering exactly the preset it renders today: the light side falls
- * through to themeId when lightThemeId is empty, and mode defaults to
- * 'light', so nothing regresses on upgrade.
+ * configured yet". A legacy install that only ever set themeId has no
+ * themeMode at all, and only that case falls through to themeId, so the
+ * preset it renders today survives the upgrade.
+ *
+ * With a themeMode inside the enum the two sides are SYMMETRIC, light is
+ * lightThemeId or the default preset and dark is darkThemeId or the
+ * midnight fallback. themeId stays an OUTPUT (the popup mirrors the active
+ * side into it for the other hosts) and never feeds back in as an input,
+ * otherwise a dark id mirrored there would resolve on the light side too.
  */
 
 import { DEFAULT_SETTINGS } from '../config/settings.generated';
@@ -17,7 +22,7 @@ import { DEFAULT_SETTINGS } from '../config/settings.generated';
 // darkThemeId now defaults to '' (see above), so the historical midnight
 // fallback can no longer be read off DEFAULT_SETTINGS. Kept as the single
 // named constant so the literal isn't scattered.
-const FALLBACK_DARK_THEME_ID = 'midnight';
+export const FALLBACK_DARK_THEME_ID = 'midnight';
 
 export interface ThemeSelection {
   themeMode?: string;
@@ -36,11 +41,18 @@ function firstNonEmpty(...values: Array<string | undefined>): string {
 }
 
 function resolveLightSide(selection: ThemeSelection): string {
-  return firstNonEmpty(selection.lightThemeId, selection.themeId);
+  return firstNonEmpty(selection.lightThemeId);
 }
 
 function resolveDarkSide(selection: ThemeSelection): string {
   return firstNonEmpty(selection.darkThemeId, FALLBACK_DARK_THEME_ID);
+}
+
+// Only for a stored themeMode that is absent or outside the enum, the one
+// real legacy-compatibility case. An explicit mode goes through
+// resolveLightSide, which never reads themeId.
+function resolveLegacyLightSide(selection: ThemeSelection): string {
+  return firstNonEmpty(selection.lightThemeId, selection.themeId);
 }
 
 export function resolveEffectiveThemeId(selection: ThemeSelection, isDark: boolean): string {
@@ -50,5 +62,8 @@ export function resolveEffectiveThemeId(selection: ThemeSelection, isDark: boole
   if (selection.themeMode === 'dark') {
     return resolveDarkSide(selection);
   }
-  return resolveLightSide(selection);
+  if (selection.themeMode === 'light') {
+    return resolveLightSide(selection);
+  }
+  return resolveLegacyLightSide(selection);
 }

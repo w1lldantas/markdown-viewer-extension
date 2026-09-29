@@ -2,10 +2,11 @@
  * Theme resolution tests.
  *
  * resolveEffectiveThemeId is the whole decision: light/dark pin a side,
- * auto picks a side from the OS preference. The light side falls through
- * lightThemeId -> themeId -> 'default' so a legacy install that only ever
- * set themeId keeps rendering exactly what it renders today. The dark side
- * falls through darkThemeId -> 'midnight'.
+ * auto picks a side from the OS preference. With a themeMode inside the
+ * enum the sides are symmetric, light falls through lightThemeId ->
+ * 'default' and dark through darkThemeId -> 'midnight'. Only an absent or
+ * out-of-enum themeMode still falls through to themeId, so a legacy install
+ * that only ever set themeId keeps rendering what it renders today.
  */
 
 import assert from 'assert';
@@ -52,9 +53,19 @@ describe('resolveEffectiveThemeId', () => {
     assert.strictEqual(resolveEffectiveThemeId({ themeId: 'swiss' }, true), 'swiss');
   });
 
-  it('empty strings on the light side fall through to themeId then the default', () => {
-    assert.strictEqual(resolveEffectiveThemeId({ themeMode: 'light', lightThemeId: '', themeId: 'swiss' }, false), 'swiss');
+  it('an explicit mode keeps themeId out of the light side and uses the default preset', () => {
+    assert.strictEqual(resolveEffectiveThemeId({ themeMode: 'light', lightThemeId: '', themeId: 'swiss' }, false), 'default');
     assert.strictEqual(resolveEffectiveThemeId({ themeMode: 'light', lightThemeId: '', themeId: '' }, false), 'default');
+  });
+
+  it('follow-system on a light OS ignores a dark themeId mirrored by the mode switch', () => {
+    // switchThemeMode mirrors the active side's id into themeId for the other
+    // hosts. That mirror must stay an OUTPUT: picking dark and then switching
+    // to auto used to leave themeId='midnight' as the light side's fallback,
+    // so a light OS rendered midnight.
+    const selection = { themeMode: 'auto', themeId: 'midnight', lightThemeId: '', darkThemeId: 'midnight' };
+    assert.strictEqual(resolveEffectiveThemeId(selection, false), 'default');
+    assert.strictEqual(resolveEffectiveThemeId(selection, true), 'midnight');
   });
 
   it('empty string on the dark side falls through to the midnight fallback', () => {

@@ -947,13 +947,11 @@ export function createSettingsTabManager({
    * mirrors that side's current effective id into themeId/selectedTheme, so
    * the other hosts keep following the browser's choice exactly as they do
    * today. It also writes that same id into the side's own key
-   * (lightThemeId/darkThemeId), because both default to '' and fall back to
-   * themeId (see theme-resolver.ts). Without that, mirroring a dark id into
-   * themeId would make the light side's own `lightThemeId || themeId`
-   * fallback resolve to that dark id too, poisoning the light side the
-   * moment the user switches away and back. Moving to auto writes only
-   * themeMode, per the invariant that the OS changing the theme must never
-   * move the user's manual preset.
+   * (lightThemeId/darkThemeId), because with an explicit themeMode the
+   * resolver reads only that key (see theme-resolver.ts), so the mirror in
+   * themeId is an output for the other hosts and never an input here.
+   * Moving to auto writes only themeMode, per the invariant that the OS
+   * changing the theme must never move the user's manual preset.
    */
   async function switchThemeMode(mode: string): Promise<void> {
     try {
