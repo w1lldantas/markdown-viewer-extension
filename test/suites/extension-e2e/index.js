@@ -12,3 +12,4 @@ import './save-file-name.test.ts';
 import './code-view.test.ts';
 import './workspace-file-switch.test.ts';
 import './theme-auto-mode.test.ts';
+import './popup-theme-mode.test.ts';
