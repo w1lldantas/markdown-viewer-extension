@@ -1843,6 +1843,11 @@ async function syncDarkClassFromSelectedTheme(): Promise<void> {
     const isDark = themeManager.getThemeCategory(themeId) === 'dark';
     document.documentElement.classList.toggle('dark', isDark);
     try { localStorage.setItem('mdv-dark', isDark ? '1' : '0'); } catch { /* storage disabled */ }
+    // The mode goes next to the flag so the preload can tell a pinned
+    // resolution from an auto one (see ./dark-preload.js).
+    let themeMode = '';
+    try { themeMode = await globalThis.platform?.settings?.get('themeMode') ?? ''; } catch { /* mode unknown */ }
+    try { localStorage.setItem('mdv-theme-mode', themeMode); } catch { /* storage disabled */ }
   } catch { /* keep default light */ }
 }
 

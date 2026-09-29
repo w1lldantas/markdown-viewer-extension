@@ -1171,6 +1171,16 @@ export async function loadAndApplyTheme(themeId: string): Promise<void> {
         firstLineIndent = await settings.get('firstLineIndent');
       }
     } catch { /* use default 0 */ }
+    // Stored next to the mdv-dark flag below so the preload can tell a pinned
+    // resolution from an auto one: in auto mode the OS outranks the cached
+    // flag, in a fixed mode it does not (see chrome/src/workspace/dark-preload.js).
+    let themeMode = '';
+    try {
+      const settings = platform?.settings;
+      if (settings) {
+        themeMode = await settings.get('themeMode');
+      }
+    } catch { /* leave the mode unknown */ }
     const css = themeToCSS(theme, layoutScheme, colorScheme, tableStyle, codeTheme, firstLineIndent);
     applyThemeCSS(css);
     
@@ -1208,6 +1218,11 @@ export async function loadAndApplyTheme(themeId: string): Promise<void> {
       try {
         if (typeof localStorage !== 'undefined') {
           localStorage.setItem('mdv-dark', colorSchema === 'dark' ? '1' : '0');
+        }
+      } catch { /* storage disabled */ }
+      try {
+        if (typeof localStorage !== 'undefined') {
+          localStorage.setItem('mdv-theme-mode', themeMode);
         }
       } catch { /* storage disabled */ }
     }

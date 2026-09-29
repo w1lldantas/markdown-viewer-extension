@@ -11,6 +11,34 @@
     cached = localStorage.getItem('mdv-dark');
   } catch (_) { /* storage disabled */ }
 
+  // The mode is written next to the flag by the same two writers. In auto
+  // mode the OS is the authority and `mdv-dark` is only a snapshot of the
+  // last resolution, which goes stale the moment the OS flips with no tab
+  // open — so there the live matchMedia read wins. In a fixed mode the flag
+  // still wins (see below): a manual light theme on a dark OS must not flash
+  // dark. An absent mode key (older install) keeps the old behaviour.
+  var mode = null;
+  try {
+    mode = localStorage.getItem('mdv-theme-mode');
+  } catch (_) { /* storage disabled */ }
+
+  if (mode === 'auto') {
+    var osDark = null;
+    try {
+      if (typeof matchMedia === 'function') {
+        osDark = matchMedia('(prefers-color-scheme: dark)').matches;
+      }
+    } catch (_) { /* matchMedia unavailable */ }
+    if (osDark !== null) {
+      if (osDark) {
+        document.documentElement.classList.add('dark');
+      }
+      return;
+    }
+    // matchMedia unusable: fall through to the cached flag below rather than
+    // guessing light.
+  }
+
   if (cached !== '1' && cached !== '0') {
     // Sessions that were already open when the flag moved still only have the
     // per-tab copy; read it rather than making those tabs worse.
